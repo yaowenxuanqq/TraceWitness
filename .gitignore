@@ -1,0 +1,76 @@
+# Private / internal materials
+/交底书/
+/_docx_text/
+/.workbuddy/
+/.private/
+/private-docs/
+/*_产品重构分析.md
+/*_项目计划书.md
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
+config/local.*
+
+# Java / Gradle / Maven
+.gradle/
+build/
+target/
+out/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node / web
+node_modules/
+dist/
+coverage/
+.vite/
+*.tsbuildinfo
+
+# Runtime data and evidence
+data/local/
+uploads/
+storage/
+*.h2.db
+*.mv.db
+*.trace.db
+*.sqlite
+*.sqlite3
+*-wal
+*-shm
+logs/
+tmp/
+temp/
+
+# Model weights and large generated artifacts
+models/**/*.gguf
+models/**/*.onnx
+models/**/*.pt
+models/**/*.pth
+models/**/*.safetensors
+artifacts/generated/
+
+# IDE / OS
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+desktop.ini
