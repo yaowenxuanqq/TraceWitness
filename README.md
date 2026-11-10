@@ -32,9 +32,17 @@ Python FastAPI AI service
 Local runtime
     |- H2 file database
     |- local media/evidence storage
+    |- deterministic device/event simulator
     |- in-process queue and outbox
     |- llama.cpp + local GGUF model when available
 ```
+
+## Software-only Boundary
+
+- No physical cameras, access-control devices, elevators, edge boxes, vendor SDKs, or private hardware protocols.
+- Device status, telemetry, access events, and simulated actions come from a deterministic software simulator.
+- Optional RTSP is a local software-fed test stream, not a hardware integration.
+- Performance results describe software inference on the development machine, not edge-chip performance.
 
 ## Core Engineering Goals
 
