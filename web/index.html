@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div id="banner" class="banner">MOCK_MODE</div>
+  <header id="banner" class="banner">MOCK_MODE</header>
   <main>
     <header>
       <p class="eyebrow">TraceWitness</p>
@@ -41,6 +41,7 @@
       <audio id="clip-audio" controls></audio>
       <div id="clips"></div>
       <form id="upload">
+        <label for="upload-file">上传文件</label>
         <input id="upload-file" type="file" name="file" accept="video/*,audio/*">
         <button type="submit">上传并播放</button>
       </form>
@@ -83,6 +84,11 @@
     <section>
       <h2>证据包</h2>
       <div id="packages"></div>
+    </section>
+    <section>
+      <h2>插件</h2>
+      <div id="plugins"></div>
+      <div id="rollbacks"></div>
     </section>
     <section>
       <h2>难例与候选模型</h2>

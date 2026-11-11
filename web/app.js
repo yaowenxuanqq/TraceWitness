@@ -202,11 +202,54 @@ function renderTrails(overview) {
       });
     });
   });
+  renderPlugins(overview);
   const compares = overview.compares || [];
   document.getElementById("compares").innerHTML = compares.length ? compares.map((item) => `
     <article class="ticket">
       <p><span class="badge">${item.trained ? "已训练" : "未训练"}</span> ${esc(item.leftName)} ${esc(item.leftScore)} · ${esc(item.rightName)} ${esc(item.rightScore)}</p>
       <p class="mono">优胜 ${esc(item.winner)} · ${esc(item.caseKey)}</p>
+    </article>
+  `).join("") : "";
+}
+
+function renderPlugins(overview) {
+  const slotLabel = { active: "在用", previous: "上一版", candidate: "候选", rejected: "未加载", retired: "已换下" };
+  const plugins = overview.plugins || [];
+  const canRollback = plugins.some((item) => item.slot === "previous");
+  document.getElementById("plugins").innerHTML = plugins.length ? plugins.map((item) => {
+    const fault = item.slot === "active"
+      ? `<p><button type="button" data-kind="fault" data-id="${esc(item.id)}">故障注入</button></p>`
+      : "";
+    return `<article class="ticket">
+      <p><span class="badge">${esc(slotLabel[item.slot] || item.slot)}</span> ${esc(item.name)} ${esc(item.version)} · ${esc(item.reason)} · 健康 ${esc(item.health)}</p>
+      <p class="mono">${esc(item.checkOrder)} · 已加载 ${item.loaded ? "是" : "否"} · 核对哈希 ${item.hashChecked ? "是" : "否"} · ${esc(item.resourceMb)}MB</p>
+      ${fault}
+    </article>`;
+  }).join("") + (canRollback ? `<p><button type="button" data-kind="rollback">回滚到上一版</button></p>` : "") : `<p class="muted">还没有插件</p>`;
+  document.getElementById("plugins").querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const request = button.dataset.kind === "rollback"
+        ? fetch("/api/plugins/rollback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ actor: "investigator" })
+        })
+        : fetch("/api/plugins/" + button.dataset.id + "/fault", { method: "POST" });
+      request.then((response) => {
+        if (!response.ok) {
+          throw new Error("插件操作没有写入");
+        }
+        window.location.reload();
+      }).catch((error) => {
+        button.insertAdjacentText("afterend", error.message);
+      });
+    });
+  });
+  const rollbacks = overview.rollbacks || [];
+  document.getElementById("rollbacks").innerHTML = rollbacks.length ? rollbacks.map((item) => `
+    <article class="ticket">
+      <p><span class="badge">${esc(item.reason)}</span> ${esc(item.actor)}</p>
+      <p class="mono">${esc(item.fromId)} → ${esc(item.toId || "无")}</p>
     </article>
   `).join("") : "";
 }

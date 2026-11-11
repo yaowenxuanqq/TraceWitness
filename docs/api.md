@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | GET | `/api/health` | 进程存活 |
 | GET | `/api/mode` | `MOCK_MODE` 或真实模式 |
-| GET | `/api/overview` | 首页用的运行、事件、档案、检索、轨迹、证据包和难例 |
+| GET | `/api/overview` | 首页用的运行、事件、档案、检索、轨迹、证据包、插件和难例 |
 
 ## 调查
 
@@ -50,4 +50,15 @@
 | GET | `/api/hard-cases/export` | 导出已标注难例。未标注的不出现 |
 
 缺文件的证据包校验结果是 `evidence_missing`。已标注的难例不能再次标注。
+
+## 插件
+
+`/api/overview` 的 `plugins` 带槽位、验签原因和健康分。`rollbacks` 是已经发生的回滚。
+
+| 方法 | 路径 | 作用 |
+| --- | --- | --- |
+| POST | `/api/plugins/{id}/fault` | 对在用插件做签名故障注入，并回到上一版 |
+| POST | `/api/plugins/rollback` | 人工回滚。正文是 `actor` |
+
+签名失败的包 `loaded` 为 false，`hashChecked` 也为 false。不是在用槽位时，故障注入返回 409。没有上一版时，回滚返回 409。
 

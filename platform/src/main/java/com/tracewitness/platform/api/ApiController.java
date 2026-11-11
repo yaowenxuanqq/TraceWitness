@@ -5,6 +5,7 @@ import com.tracewitness.platform.scenario.ScenarioService;
 import com.tracewitness.platform.store.PlatformStore;
 import com.tracewitness.platform.store.PlatformStore.RunManifest;
 import com.tracewitness.platform.store.TrackStore;
+import com.tracewitness.platform.plugin.PluginService;
 import com.tracewitness.platform.route.RouteService;
 import com.tracewitness.platform.profile.ProfileService;
 import com.tracewitness.platform.retrieval.RetrievalService;
@@ -37,10 +38,11 @@ public class ApiController {
     private final ProfileService profiles;
     private final RetrievalService retrieval;
     private final TrajectoryService trajectories;
+    private final PluginService plugins;
 
     public ApiController(AppProperties properties, ScenarioService scenarios, PlatformStore store, TrackStore tracks,
                          StructureService structure, RouteService routes, ProfileService profiles,
-                         RetrievalService retrieval, TrajectoryService trajectories) {
+                         RetrievalService retrieval, TrajectoryService trajectories, PluginService plugins) {
         this.properties = properties;
         this.scenarios = scenarios;
         this.store = store;
@@ -50,6 +52,7 @@ public class ApiController {
         this.profiles = profiles;
         this.retrieval = retrieval;
         this.trajectories = trajectories;
+        this.plugins = plugins;
     }
 
     @GetMapping("/health")
@@ -117,6 +120,10 @@ public class ApiController {
         body.put("packages", trail.get("packages"));
         body.put("hardCases", trail.get("hardCases"));
         body.put("compares", trail.get("compares"));
+        Map<String, Object> plugin = plugins.overview();
+        body.put("plugins", plugin.get("plugins"));
+        body.put("pluginHealth", plugin.get("health"));
+        body.put("rollbacks", plugin.get("rollbacks"));
         body.put("tools", tools());
         return body;
     }
@@ -231,6 +238,28 @@ public class ApiController {
     @GetMapping("/hard-cases/export")
     public List<Map<String, Object>> exportHardCases() {
         return trajectories.exportHardCases(scenarios.runId());
+    }
+
+    @PostMapping("/plugins/{id}/fault")
+    public ResponseEntity<Map<String, Object>> pluginFault(@PathVariable String id) {
+        Map<String, Object> result = plugins.fault(id);
+        if (result == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!Boolean.TRUE.equals(result.get("applied"))) {
+            return ResponseEntity.status(409).body(result);
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/plugins/rollback")
+    public ResponseEntity<Map<String, Object>> pluginRollback(@RequestBody Map<String, Object> body) {
+        String actor = body.get("actor") == null ? "" : String.valueOf(body.get("actor"));
+        Map<String, Object> result = plugins.rollback(actor);
+        if (!Boolean.TRUE.equals(result.get("applied"))) {
+            return ResponseEntity.status(409).body(result);
+        }
+        return ResponseEntity.ok(result);
     }
 
     private static Map<String, Object> manifestView(RunManifest manifest) {

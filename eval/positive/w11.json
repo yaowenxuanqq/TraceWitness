@@ -1,0 +1,45 @@
+[
+  {
+    "id": "bad-sign",
+    "name": "door-watch",
+    "version": "1.2.0",
+    "payload": "entry=forged\n",
+    "resource_mb": 16,
+    "tamper": "signature",
+    "expect": {"loaded": false, "hash_checked": false, "reason": "bad_signature", "health": "0.00"}
+  },
+  {
+    "id": "bad-hash",
+    "name": "door-watch",
+    "version": "1.3.0",
+    "payload": "entry=watch\n",
+    "resource_mb": 16,
+    "tamper": "hash",
+    "expect": {"loaded": false, "hash_checked": true, "reason": "hash_mismatch", "health": "0.25"}
+  },
+  {
+    "id": "bad-abi",
+    "name": "door-watch",
+    "version": "1.4.0",
+    "payload": "entry=watch\n",
+    "resource_mb": 16,
+    "abi": "native-v9",
+    "expect": {"loaded": false, "hash_checked": true, "reason": "abi_rejected", "health": "0.40"}
+  },
+  {
+    "id": "over-resource",
+    "name": "crowd-count",
+    "version": "0.9.0",
+    "payload": "entry=crowd\n",
+    "resource_mb": 128,
+    "expect": {"loaded": false, "hash_checked": true, "reason": "resource_rejected", "health": "0.55"}
+  },
+  {
+    "id": "promote",
+    "name": "door-watch",
+    "version": "1.0.0",
+    "payload": "entry=watch\n",
+    "resource_mb": 16,
+    "expect": {"loaded": true, "hash_checked": true, "reason": "accepted", "health": "1.00", "check_order": "signature,hash,abi,resource"}
+  }
+]
