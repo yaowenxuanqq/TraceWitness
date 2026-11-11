@@ -7,6 +7,7 @@
 - Windows
 - Java 8。脚本不使用指向 Java 21 的 `JAVA_HOME`。可以设置 `JAVA_HOME_8`
 - Python 3.13。第一次执行 `run_mock.bat` 时，如果 `ai-service\.venv` 不存在，脚本会创建它并安装 `ai-service\requirements.txt`
+- `run_eval.bat` 也会自动创建同一虚拟环境，干净 clone 可直接跑评测
 - 端口 8080 和 8000 空闲
 
 模型地址和密钥不放进仓库。没有配置时使用 `MOCK_MODE`，页面会标出来。这条结果不计入真实 Agent 指标。
