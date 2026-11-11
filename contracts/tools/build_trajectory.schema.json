@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "build_trajectory",
+  "description": "按档案返回抽稀后的门点轨迹。不带档案时返回本次 run 的摄像机轨迹。不可达点不进入保留序列。",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "profile_id": { "type": "string" }
+  }
+}

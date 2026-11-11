@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "export_evidence",
+  "description": "导出已落盘的事件片段，并写入可校验的证据包哈希。文件缺失则报错，不生成哈希。",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "source_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

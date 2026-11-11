@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "search_person",
+  "description": "第 8 周由 Java 在已有档案里检索。检索本身不新建人员。",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "query": { "type": "string" }
+  }
+}

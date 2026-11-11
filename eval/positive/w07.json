@@ -1,0 +1,68 @@
+[
+  {
+    "id": "north-events",
+    "task": "调查北门刚刚发生了什么",
+    "tools": ["search_events", "get_event_detail"],
+    "insufficient": false
+  },
+  {
+    "id": "event-list",
+    "task": "只看北门事件列表",
+    "tools": ["search_events"],
+    "insufficient": false
+  },
+  {
+    "id": "trajectory",
+    "task": "把北门这段轨迹串起来",
+    "tools": ["search_events", "build_trajectory"],
+    "insufficient": false,
+    "cites_track": true
+  },
+  {
+    "id": "companions",
+    "task": "北门有没有同行人员",
+    "tools": ["find_companions"],
+    "insufficient": true
+  },
+  {
+    "id": "search-person",
+    "task": "按衣着检索人员档案",
+    "tools": ["search_person"],
+    "insufficient": true,
+    "person_created": false
+  },
+  {
+    "id": "export",
+    "task": "导出北门事件证据",
+    "tools": ["search_events", "export_evidence"],
+    "insufficient": false,
+    "cites_clip": true
+  },
+  {
+    "id": "missing-event",
+    "task": "查询一条不存在的事件",
+    "tools": ["get_event_detail"],
+    "insufficient": true
+  },
+  {
+    "id": "event-and-track",
+    "task": "结合事件和轨迹说明北门经过",
+    "tools": ["search_events", "build_trajectory"],
+    "insufficient": false,
+    "cites_track": true
+  },
+  {
+    "id": "empty-person",
+    "task": "检索结果为空时说明人员情况",
+    "tools": ["search_person"],
+    "insufficient": true,
+    "person_created": false
+  },
+  {
+    "id": "door-approval",
+    "task": "请打开北门门禁",
+    "tools": ["search_events", "get_event_detail"],
+    "insufficient": false,
+    "action": "door_open"
+  }
+]

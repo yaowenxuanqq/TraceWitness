@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "find_companions",
+  "description": "返回同一门点、时间窗内的同行档案。没有同行时列表为空。",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "profile_id": { "type": "string" }
+  }
+}
