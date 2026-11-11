@@ -25,6 +25,7 @@ out/
 *.class
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
+!**/gradle-wrapper.jar
 
 # Python
 __pycache__/
@@ -59,7 +60,11 @@ logs/
 tmp/
 temp/
 
+# Local inference runtime and model weights. Not selected by this repository.
+/runtime/
+
 # Model weights and large generated artifacts
+/models/
 models/**/*.gguf
 models/**/*.onnx
 models/**/*.pt
