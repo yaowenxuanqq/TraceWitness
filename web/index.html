@@ -34,6 +34,20 @@
       </table>
     </section>
     <section>
+      <h2>媒体与 AOR</h2>
+      <p id="media-note" class="muted"></p>
+      <audio id="channel-audio" controls></audio>
+      <img id="clip-frame" alt="事件片段画面">
+      <audio id="clip-audio" controls></audio>
+      <div id="clips"></div>
+      <form id="upload">
+        <input id="upload-file" type="file" name="file" accept="video/*,audio/*">
+        <button type="submit">上传并播放</button>
+      </form>
+      <video id="upload-video" controls hidden></video>
+      <audio id="upload-audio" controls hidden></audio>
+    </section>
+    <section>
       <h2>点位与设备</h2>
       <div id="places"></div>
     </section>
