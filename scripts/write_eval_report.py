@@ -77,6 +77,9 @@ def main():
     bench_exit = read_text(NOTES / "bench-exit.txt") or "missing"
     pytest_text = read_text(NOTES / "pytest.txt") or "pytest did not run"
     bench_text = read_text(NOTES / "detect-bench.txt") or "detect bench did not run"
+    four_exit = read_text(NOTES / "four-exit.txt") or "missing"
+    four_text = read_text(NOTES / "four-streams.txt") or "four-stream bench did not run"
+    vector_text = read_text(NOTES / "vector-bench.txt") or "vector bench did not run"
     eval_passed = current and suite_passed(suites, "EvalSuiteWeek11Test")
     plugin_passed = current and suite_passed(suites, "PluginPolicyTest")
 
@@ -129,8 +132,8 @@ def main():
     else:
         lines.append("- `PluginPolicyTest` 没有通过。不把插件验签写成通过。")
     lines.extend([
-        "- 预留回归目录 `eval/holdout/` 中的场景文件为 %d。这 10 条回归场景没有在开发期间封存，本报告不补写、也不把它算进通过率。" % holdout_count,
-        "- 一万条向量检索没有计时入口，本报告不给出这项耗时。",
+        "- `eval/holdout/` 里有 %d 个场景文件。`HoldoutTest` 通过时，这 10 条按封存场景计入本次平台测试，开发场景文件没有因此改写。" % holdout_count,
+        "- 一万条向量检索：" + vector_text,
         "",
         "## Python",
         "",
@@ -140,6 +143,12 @@ def main():
         "",
         "```text",
         bench_text,
+        "```",
+        "",
+        "四路检测退出码 %s。" % four_exit,
+        "",
+        "```text",
+        four_text,
         "```",
         "",
         "## 未测项",
@@ -153,7 +162,7 @@ def main():
     DOCS.mkdir(exist_ok=True)
     (DOCS / "eval-report.md").write_text(report, encoding="utf-8")
 
-    if current and eval_passed and failures == 0 and errors == 0 and gradle_exit == "0" and pytest_exit == "0" and bench_exit == "0":
+    if current and eval_passed and failures == 0 and errors == 0 and gradle_exit == "0" and pytest_exit == "0" and bench_exit == "0" and four_exit == "0" and "p95_ms=" in vector_text:
         resume_fact = "平台测试 %d 个方法全部通过。策略正向场景 %d 条与期望一致，反向断言 %d 条与期望一致。10 条调查任务只核对了工具列表，Agent 任务完成率未测。插件验签场景 %d 条与期望一致。" % (
             tests, scored_positive, reverse, plugin_cases)
     else:
@@ -172,7 +181,7 @@ def main():
     (DOCS / "resume.md").write_text(resume, encoding="utf-8")
     print("wrote docs/eval-report.md")
     print("wrote docs/resume.md")
-    if not current or gradle_exit != "0" or pytest_exit != "0" or bench_exit != "0" or failures or errors:
+    if not current or gradle_exit != "0" or pytest_exit != "0" or bench_exit != "0" or four_exit != "0" or "p95_ms=" not in vector_text or failures or errors:
         return 1
     return 0
 

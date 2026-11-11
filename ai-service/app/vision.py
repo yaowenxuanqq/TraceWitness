@@ -181,8 +181,7 @@ def analyze_sample(frames=SAMPLE_FRAMES, width=1920, height=1080):
     return analyze_frames([sample_frame(index, width, height) for index in range(frames)])
 
 
-def measure_detect_fps(frames=20, width=1920, height=1080):
-    session = get_session()
+def measure_detect_fps_with_session(session, frames=20, width=1920, height=1080):
     tensors = []
     for index in range(frames):
         small = downsample_width(sample_frame(index, width, height), DETECT_WIDTH)
@@ -196,3 +195,7 @@ def measure_detect_fps(frames=20, width=1920, height=1080):
     if elapsed <= 0:
         return 0.0
     return frames / elapsed
+
+
+def measure_detect_fps(frames=20, width=1920, height=1080):
+    return measure_detect_fps_with_session(get_session(), frames, width, height)

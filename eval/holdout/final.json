@@ -1,0 +1,102 @@
+[
+  {
+    "id": "hold-timeout",
+    "op": "rule",
+    "rule": "tool_timeout",
+    "input": {"timed_out": true, "payload": {"note": "holdout"}},
+    "expect": {"outcome": "no_result", "fabricated": false}
+  },
+  {
+    "id": "hold-low-face",
+    "op": "rule",
+    "rule": "low_quality_face",
+    "input": {"face_quality": "0.12"},
+    "expect": {"profile_created": false}
+  },
+  {
+    "id": "hold-billing",
+    "op": "rule",
+    "rule": "unknown_business",
+    "input": {"business": "billing"},
+    "expect": {"public_network": false}
+  },
+  {
+    "id": "hold-missing-file",
+    "op": "rule",
+    "rule": "missing_evidence",
+    "input": {"path_exists": false},
+    "expect": {"error": "evidence_missing"}
+  },
+  {
+    "id": "hold-elevator",
+    "op": "rule",
+    "rule": "high_risk",
+    "input": {"action": "elevator_call"},
+    "expect": {"status": "pending_human", "executed": false}
+  },
+  {
+    "id": "hold-bad-sign",
+    "op": "plugin",
+    "input": {
+      "name": "gate-count",
+      "version": "2.0.0",
+      "payload": "entry=count\n",
+      "resource_mb": 8,
+      "tamper": "signature"
+    },
+    "expect": {"loaded": false, "hash_checked": false, "reason": "bad_signature"}
+  },
+  {
+    "id": "hold-yard-bike",
+    "op": "passage",
+    "input": {
+      "scene": "yard",
+      "frames": [
+        {"kind": "bicycle", "direction": "in", "crossed": true},
+        {"kind": "bicycle", "direction": "in", "crossed": true},
+        {"kind": "bicycle", "direction": "in", "crossed": true}
+      ]
+    },
+    "expect": {"alert": false, "streak": 3, "status": "none", "executed": false}
+  },
+  {
+    "id": "hold-stair-roof",
+    "op": "trajectory",
+    "input": {
+      "points": [
+        {"id": "s", "profile": "hold", "door": "stair", "at": 0},
+        {"id": "r", "profile": "hold", "door": "roof", "at": 15}
+      ]
+    },
+    "expect": {
+      "kept": ["s"],
+      "dropped": [{"id": "r", "reason": "unreachable"}]
+    }
+  },
+  {
+    "id": "hold-hard-empty",
+    "op": "search",
+    "input": {
+      "candidates": [
+        {"id": "night", "face": ["1.00", "0.00", "0.00"], "attributes": {"upper_color": "dark"}}
+      ],
+      "images": [{"face": ["1.00", "0.00", "0.00"]}],
+      "hard": {"upper_color": "light"}
+    },
+    "expect": {"person_created": false, "created": false, "hits": []}
+  },
+  {
+    "id": "hold-dim-face",
+    "op": "decide",
+    "input": {
+      "face_quality": "0.20",
+      "vector": ["0.10", "0.20", "0.30"],
+      "from_door": "lobby",
+      "tick_from": 0,
+      "tick_to": 0,
+      "tick_ms": 1000,
+      "profiles": []
+    },
+    "expect": {"merge": "none", "reason": "low_quality", "profile_created": false}
+  }
+]

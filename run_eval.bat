@@ -8,7 +8,7 @@ if errorlevel 1 goto fail
 
 if not exist "%REPO%\build\eval" mkdir "%REPO%\build\eval"
 if exist "%REPO%\platform\build\test-results" rmdir /s /q "%REPO%\platform\build\test-results"
-del /q "%REPO%\build\eval\pytest.txt" "%REPO%\build\eval\detect-bench.txt" "%REPO%\build\eval\gradle-exit.txt" "%REPO%\build\eval\pytest-exit.txt" "%REPO%\build\eval\bench-exit.txt" 2>nul
+del /q "%REPO%\build\eval\pytest.txt" "%REPO%\build\eval\detect-bench.txt" "%REPO%\build\eval\four-streams.txt" "%REPO%\build\eval\vector-bench.txt" "%REPO%\build\eval\gradle-exit.txt" "%REPO%\build\eval\pytest-exit.txt" "%REPO%\build\eval\bench-exit.txt" "%REPO%\build\eval\four-exit.txt" 2>nul
 > "%REPO%\build\eval\this-run.txt" echo start
 
 echo [eval] platform tests
@@ -29,17 +29,24 @@ echo [eval] detect bench
 "%PY%" bench_detect.py > "%REPO%\build\eval\detect-bench.txt" 2>&1
 set BENCH_EXIT=%ERRORLEVEL%
 > "%REPO%\build\eval\bench-exit.txt" echo %BENCH_EXIT%
+
+echo [eval] four streams
+"%PY%" bench_four_streams.py > "%REPO%\build\eval\four-streams.txt" 2>&1
+set FOUR_EXIT=%ERRORLEVEL%
+> "%REPO%\build\eval\four-exit.txt" echo %FOUR_EXIT%
 popd
+if exist "%REPO%\platform\build\vector-bench.txt" copy /y "%REPO%\platform\build\vector-bench.txt" "%REPO%\build\eval\vector-bench.txt" >nul
 
 echo [eval] report
 "%PY%" "%REPO%\scripts\write_eval_report.py"
 set REPORT_EXIT=%ERRORLEVEL%
 
-echo [eval] gradle=%GRADLE_EXIT% pytest=%PYTEST_EXIT% bench=%BENCH_EXIT% report=%REPORT_EXIT%
+echo [eval] gradle=%GRADLE_EXIT% pytest=%PYTEST_EXIT% bench=%BENCH_EXIT% four=%FOUR_EXIT% report=%REPORT_EXIT%
 echo [eval] see docs\eval-report.md
 if not "%GRADLE_EXIT%"=="0" goto fail
 if not "%PYTEST_EXIT%"=="0" goto fail
 if not "%BENCH_EXIT%"=="0" goto fail
+if not "%FOUR_EXIT%"=="0" goto fail
 if not "%REPORT_EXIT%"=="0" goto fail
 exit /b 0
 

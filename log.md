@@ -1,3 +1,20 @@
+## 2026-11-11 17:00 - 补四路检测、万条检索和封存场景
+- 修改人：AI助手
+- 影响文件：
+  - ai-service/app/vision.py （修改）
+  - ai-service/bench_four_streams.py （新增）
+  - eval/holdout/final.json （新增）
+  - platform/src/test/java/com/tracewitness/platform/HoldoutTest.java （新增）
+  - platform/src/test/java/com/tracewitness/platform/VectorBenchTest.java （新增）
+  - run_eval.bat （修改）
+  - scripts/write_eval_report.py （修改）
+  - docs/architecture.md （修改）
+  - log.md （修改）
+- 变更概要：
+  - 四路 1080p 检测和一万条三维向量检索进入一键评测，P95 超过 1 秒或最慢一路低于 2 fps 时评测失败
+  - 10 条封存场景放在 eval/holdout，只在评测里跑，不改已有场景文件
+- 关联需求：审计 P1-01
+
 ## 2026-11-11 16:50 - 审计项：脚本、绑定、契约和窄屏
 - 修改人：AI助手
 - 影响文件：
