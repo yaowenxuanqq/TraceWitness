@@ -68,6 +68,52 @@ function render(overview) {
     </article>`;
   }).join("") : `<p class="muted">还没有路由决策</p>`;
   renderProfiles(overview);
+  renderRetrieval(overview);
+}
+
+function renderRetrieval(overview) {
+  const queries = overview.queries || [];
+  document.getElementById("queries").innerHTML = queries.length ? queries.map((query) => {
+    const hits = (query.hits || []).map((hit) =>
+      `<p class="mono">${esc(hit.rank)}. ${esc(hit.candidateCode)} · ${esc(hit.explanation)}</p>`
+    ).join("");
+    const excluded = (query.exclusions || []).map((item) =>
+      `<p class="mono">排除 ${esc(item.candidateCode)} · ${esc(item.explanation)}</p>`
+    ).join("");
+    return `<article class="ticket">
+      <p><span class="badge">${esc(query.caseKey)}</span> ${esc(query.imageCount)} 张图 · ${esc(query.explainOrder)}</p>
+      ${hits || `<p class="muted">没有命中</p>`}
+      ${excluded}
+    </article>`;
+  }).join("") : `<p class="muted">还没有检索</p>`;
+  const passages = overview.passages || [];
+  document.getElementById("passages").innerHTML = passages.length ? passages.map((item) => {
+    const actions = item.alerted && item.status === "pending_human"
+      ? `<p><button type="button" data-decision="approve" data-id="${esc(item.id)}">确认告警</button><button type="button" data-decision="reject" data-id="${esc(item.id)}">驳回告警</button></p>`
+      : "";
+    const label = item.alerted ? (item.status === "confirmed" ? "已确认" : item.status === "rejected" ? "已驳回" : "待确认") : "不告警";
+    return `<article class="ticket">
+      <p><span class="badge">${esc(label)}</span> ${esc(item.detail)} · 连续 ${esc(item.streak)} 帧</p>
+      <p class="mono">${esc(item.caseKey)} · 动作 ${esc(item.actionStatus)} · 已执行 ${item.executed ? "是" : "否"}</p>
+      ${actions}
+    </article>`;
+  }).join("") : `<p class="muted">还没有门线结果</p>`;
+  document.getElementById("passages").querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      fetch("/api/alerts/" + button.dataset.id + "/decision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision: button.dataset.decision, actor: "investigator" })
+      }).then((response) => {
+        if (!response.ok) {
+          throw new Error("告警没有写入");
+        }
+        window.location.reload();
+      }).catch((error) => {
+        button.insertAdjacentText("afterend", error.message);
+      });
+    });
+  });
 }
 
 function renderProfiles(overview) {

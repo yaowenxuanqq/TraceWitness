@@ -7,6 +7,7 @@ import com.tracewitness.platform.store.PlatformStore.RunManifest;
 import com.tracewitness.platform.store.TrackStore;
 import com.tracewitness.platform.route.RouteService;
 import com.tracewitness.platform.profile.ProfileService;
+import com.tracewitness.platform.retrieval.RetrievalService;
 import com.tracewitness.platform.vision.StructureService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,9 +34,11 @@ public class ApiController {
     private final StructureService structure;
     private final RouteService routes;
     private final ProfileService profiles;
+    private final RetrievalService retrieval;
 
     public ApiController(AppProperties properties, ScenarioService scenarios, PlatformStore store, TrackStore tracks,
-                         StructureService structure, RouteService routes, ProfileService profiles) {
+                         StructureService structure, RouteService routes, ProfileService profiles,
+                         RetrievalService retrieval) {
         this.properties = properties;
         this.scenarios = scenarios;
         this.store = store;
@@ -43,6 +46,7 @@ public class ApiController {
         this.structure = structure;
         this.routes = routes;
         this.profiles = profiles;
+        this.retrieval = retrieval;
     }
 
     @GetMapping("/health")
@@ -67,11 +71,11 @@ public class ApiController {
     public List<Map<String, Object>> tools() {
         List<Map<String, Object>> tools = new ArrayList<Map<String, Object>>();
         tools.add(tool("search_events", true));
-        tools.add(tool("get_event_detail", false));
-        tools.add(tool("search_person", false));
-        tools.add(tool("build_trajectory", false));
-        tools.add(tool("find_companions", false));
-        tools.add(tool("export_evidence", false));
+        tools.add(tool("get_event_detail", true));
+        tools.add(tool("search_person", true));
+        tools.add(tool("build_trajectory", true));
+        tools.add(tool("find_companions", true));
+        tools.add(tool("export_evidence", true));
         return tools;
     }
 
@@ -101,6 +105,9 @@ public class ApiController {
         body.put("profiles", people.get("profiles"));
         body.put("tickets", people.get("tickets"));
         body.put("audits", people.get("audits"));
+        Map<String, Object> search = retrieval.overview();
+        body.put("queries", search.get("queries"));
+        body.put("passages", search.get("passages"));
         body.put("tools", tools());
         return body;
     }
@@ -165,6 +172,20 @@ public class ApiController {
         String decision = body.get("decision") == null ? "" : String.valueOf(body.get("decision"));
         String actor = body.get("actor") == null ? "" : String.valueOf(body.get("actor"));
         Map<String, Object> result = profiles.decideTicket(id, decision, actor);
+        if (result == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!Boolean.TRUE.equals(result.get("applied"))) {
+            return ResponseEntity.status(409).body(result);
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/alerts/{id}/decision")
+    public ResponseEntity<Map<String, Object>> decideAlert(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        String decision = body.get("decision") == null ? "" : String.valueOf(body.get("decision"));
+        String actor = body.get("actor") == null ? "" : String.valueOf(body.get("actor"));
+        Map<String, Object> result = retrieval.decideAlert(id, decision, actor);
         if (result == null) {
             return ResponseEntity.notFound().build();
         }

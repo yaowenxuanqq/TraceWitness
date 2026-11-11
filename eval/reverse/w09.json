@@ -1,0 +1,79 @@
+[
+  {
+    "id": "bike-out",
+    "statement": "出楼方向不得告警",
+    "op": "passage",
+    "input": {
+      "scene": "entrance",
+      "frames": [
+        {"kind": "bicycle", "direction": "out", "crossed": true},
+        {"kind": "bicycle", "direction": "out", "crossed": true},
+        {"kind": "bicycle", "direction": "out", "crossed": true}
+      ]
+    },
+    "expect": {"alert": false, "streak": 0, "status": "none", "executed": false, "action_status": "not_required"}
+  },
+  {
+    "id": "bike-gap",
+    "statement": "连续帧被打断不得告警",
+    "op": "passage",
+    "input": {
+      "scene": "entrance",
+      "frames": [
+        {"kind": "bicycle", "direction": "in", "crossed": true},
+        {"kind": "bicycle", "direction": "in", "crossed": true},
+        {"kind": "none", "direction": "in", "crossed": false},
+        {"kind": "bicycle", "direction": "in", "crossed": true}
+      ]
+    },
+    "expect": {"alert": false, "streak": 2, "status": "none", "executed": false}
+  },
+  {
+    "id": "person-in",
+    "statement": "行人穿越不得当成非机动车",
+    "op": "passage",
+    "input": {
+      "scene": "entrance",
+      "frames": [
+        {"kind": "person", "direction": "in", "crossed": true},
+        {"kind": "person", "direction": "in", "crossed": true},
+        {"kind": "person", "direction": "in", "crossed": true}
+      ]
+    },
+    "expect": {"alert": false, "streak": 0, "status": "none", "executed": false}
+  },
+  {
+    "id": "empty-search",
+    "statement": "硬过滤后无结果不得生成人员",
+    "op": "search",
+    "input": {
+      "candidates": [
+        {"id": "light", "face": ["1.00", "0.00", "0.00"], "attributes": {"upper_color": "light"}}
+      ],
+      "images": [
+        {"face": ["1.00", "0.00", "0.00"]}
+      ],
+      "hard": {"upper_color": "dark"}
+    },
+    "expect": {
+      "hits": [],
+      "person_created": false,
+      "created": false,
+      "exclusions": [{"id": "light", "reason": "hard_attribute"}]
+    }
+  },
+  {
+    "id": "off-scene",
+    "statement": "非入口场景连续进楼也不得告警",
+    "op": "passage",
+    "input": {
+      "scene": "corridor",
+      "frames": [
+        {"kind": "bicycle", "direction": "in", "crossed": true},
+        {"kind": "bicycle", "direction": "in", "crossed": true},
+        {"kind": "bicycle", "direction": "in", "crossed": true}
+      ]
+    },
+    "expect": {"alert": false, "streak": 3, "status": "none", "executed": false, "action_status": "not_required"}
+  }
+]

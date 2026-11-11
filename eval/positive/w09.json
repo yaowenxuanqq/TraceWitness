@@ -1,0 +1,119 @@
+[
+  {
+    "id": "face-max",
+    "op": "search",
+    "input": {
+      "candidates": [
+        {"id": "a", "face": ["1.00", "0.00", "0.00"], "attributes": {"upper_color": "light"}}
+      ],
+      "images": [
+        {"face": ["0.00", "1.00", "0.00"]},
+        {"face": ["1.00", "0.00", "0.00"]}
+      ]
+    },
+    "expect": {
+      "order": "hard_filter,face_max,body_weighted,fuse,soft_weight",
+      "person_created": true,
+      "created": false,
+      "hits": [
+        {
+          "id": "a",
+          "face_score": "1.00",
+          "body_score": null,
+          "fused": "1.00",
+          "rank_score": "1.00",
+          "soft_applied": false,
+          "rank": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "body-weighted",
+    "op": "search",
+    "input": {
+      "candidates": [
+        {"id": "b", "body": ["1.00", "0.00", "0.00"], "attributes": {}}
+      ],
+      "images": [
+        {"body": ["1.00", "0.00", "0.00"], "body_quality": "0.20"},
+        {"body": ["0.00", "1.00", "0.00"], "body_quality": "0.80"}
+      ]
+    },
+    "expect": {
+      "hits": [
+        {
+          "id": "b",
+          "face_score": null,
+          "body_score": "0.20",
+          "fused": "0.20",
+          "rank_score": "0.20",
+          "soft_applied": false,
+          "rank": 1
+        }
+      ]
+    }
+  },
+  {
+    "id": "hard-before-rank",
+    "op": "search",
+    "input": {
+      "candidates": [
+        {"id": "light", "face": ["1.00", "0.00", "0.00"], "attributes": {"upper_color": "light"}},
+        {"id": "dark", "face": ["0.60", "0.80", "0.00"], "attributes": {"upper_color": "dark"}}
+      ],
+      "images": [
+        {"face": ["1.00", "0.00", "0.00"]}
+      ],
+      "hard": {"upper_color": "dark"}
+    },
+    "expect": {
+      "hits": [
+        {"id": "dark", "face_score": "0.60", "fused": "0.60", "rank_score": "0.60", "rank": 1}
+      ],
+      "exclusions": [
+        {"id": "light", "reason": "hard_attribute"}
+      ]
+    }
+  },
+  {
+    "id": "soft-after-fusion",
+    "op": "search",
+    "input": {
+      "candidates": [
+        {"id": "a", "face": ["0.70", "0.71414284285428497601", "0.00"], "attributes": {"upper_color": "light"}},
+        {"id": "b", "face": ["0.72", "0.69397406291589891492", "0.00"], "attributes": {"upper_color": "dark"}}
+      ],
+      "images": [
+        {"face": ["1.00", "0.00", "0.00"]}
+      ],
+      "soft": {"upper_color": "light"}
+    },
+    "expect": {
+      "hits": [
+        {"id": "a", "face_score": "0.70", "fused": "0.70", "rank_score": "0.75", "soft_applied": true, "rank": 1},
+        {"id": "b", "face_score": "0.72", "fused": "0.72", "rank_score": "0.72", "soft_applied": false, "rank": 2}
+      ]
+    }
+  },
+  {
+    "id": "bike-in",
+    "op": "passage",
+    "input": {
+      "scene": "entrance",
+      "frames": [
+        {"kind": "bicycle", "direction": "in", "crossed": true},
+        {"kind": "bicycle", "direction": "in", "crossed": true},
+        {"kind": "bicycle", "direction": "in", "crossed": true}
+      ]
+    },
+    "expect": {
+      "alert": true,
+      "streak": 3,
+      "level": "violation",
+      "status": "pending_human",
+      "action_status": "pending_human",
+      "executed": false
+    }
+  }
+]
