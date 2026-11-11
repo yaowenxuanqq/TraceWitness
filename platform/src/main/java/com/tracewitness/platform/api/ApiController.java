@@ -4,6 +4,7 @@ import com.tracewitness.platform.config.AppProperties;
 import com.tracewitness.platform.scenario.ScenarioService;
 import com.tracewitness.platform.store.PlatformStore;
 import com.tracewitness.platform.store.PlatformStore.RunManifest;
+import com.tracewitness.platform.store.TrackStore;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,11 +23,13 @@ public class ApiController {
     private final AppProperties properties;
     private final ScenarioService scenarios;
     private final PlatformStore store;
+    private final TrackStore tracks;
 
-    public ApiController(AppProperties properties, ScenarioService scenarios, PlatformStore store) {
+    public ApiController(AppProperties properties, ScenarioService scenarios, PlatformStore store, TrackStore tracks) {
         this.properties = properties;
         this.scenarios = scenarios;
         this.store = store;
+        this.tracks = tracks;
     }
 
     @GetMapping("/health")
@@ -76,6 +79,7 @@ public class ApiController {
         body.put("agentRun", agent);
         body.put("steps", agent == null ? Collections.emptyList() : store.listSteps(String.valueOf(agent.get("id"))));
         body.put("toolCalls", agent == null ? Collections.emptyList() : store.listToolCalls(String.valueOf(agent.get("id"))));
+        body.put("tracks", tracks.listTracks(runId));
         body.put("tools", tools());
         return body;
     }

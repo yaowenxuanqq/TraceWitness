@@ -7,8 +7,10 @@ from app.adapters import (
     ModelNotConfigured,
     OpenAICompatibleAdapter,
     draft_report,
+    require_clock,
     select_tool,
 )
+from app.vision import SAMPLE_FRAMES, analyze_sample
 
 app = FastAPI(title="TraceWitness AI")
 
@@ -45,6 +47,18 @@ def select_tool_route(body: dict):
 @app.post("/v1/agent/report")
 def report_route(body: dict):
     return _call(lambda: draft_report(body, adapter))
+
+
+@app.post("/v1/vision/track")
+def vision_track(body: dict):
+    def action():
+        require_clock(body)
+        frames = int(body.get("frames") or SAMPLE_FRAMES)
+        width = int(body.get("frame_width") or 1920)
+        height = int(body.get("frame_height") or 1080)
+        return analyze_sample(frames, width, height)
+
+    return _call(action)
 
 
 def _call(action):

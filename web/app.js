@@ -34,6 +34,13 @@ function render(overview) {
     .map((site) => `${site.name} (${site.xM}, ${site.yM}) ${site.id}`);
   (overview.devices || []).forEach((device) => places.push(`${device.name} · ${device.kind} · ${device.id}`));
   document.getElementById("places").innerHTML = places.map((line) => `<p class="mono">${esc(line)}</p>`).join("");
+  const tracks = overview.tracks || [];
+  document.getElementById("tracks").innerHTML = tracks.length ? tracks.map((track) => {
+    const points = track.points || [];
+    const first = points[0] || {};
+    const last = points[points.length - 1] || {};
+    return `<p class="mono">${esc(track.id)} · ${esc(track.pointCount)} 点 · x ${esc(first.x)} → ${esc(last.x)}</p>`;
+  }).join("") : `<p class="muted">还没有轨迹</p>`;
 }
 
 function renderMedia(media) {
