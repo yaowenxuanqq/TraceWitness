@@ -1,0 +1,32 @@
+CREATE TABLE decision_snapshot (
+    id VARCHAR(160) PRIMARY KEY,
+    run_id VARCHAR(80) NOT NULL,
+    case_key VARCHAR(64) NOT NULL,
+    observation_id VARCHAR(160),
+    policy_version VARCHAR(32) NOT NULL,
+    clock_mode VARCHAR(16) NOT NULL,
+    business VARCHAR(64) NOT NULL,
+    face_quality DECIMAL(8, 2) NOT NULL,
+    body_quality DECIMAL(8, 2) NOT NULL,
+    continuity DECIMAL(8, 2) NOT NULL,
+    history_count INT NOT NULL,
+    q_observed DECIMAL(8, 2) NOT NULL,
+    q_scripted DECIMAL(8, 2) NOT NULL,
+    q_input DECIMAL(8, 2) NOT NULL,
+    theta_u_eff DECIMAL(8, 2) NOT NULL,
+    uncertainty DECIMAL(8, 2) NOT NULL,
+    degraded BOOLEAN NOT NULL,
+    route VARCHAR(16) NOT NULL,
+    reason VARCHAR(32) NOT NULL,
+    fusion VARCHAR(16) NOT NULL,
+    conclusion VARCHAR(64) NOT NULL,
+    cloud_called BOOLEAN NOT NULL,
+    local_label VARCHAR(32),
+    local_score DECIMAL(8, 2),
+    cloud_label VARCHAR(32),
+    cloud_score DECIMAL(8, 2),
+    decided_at VARCHAR(32) NOT NULL,
+    UNIQUE (run_id, case_key)
+);
+
+CREATE INDEX idx_decision_run ON decision_snapshot (run_id, id);

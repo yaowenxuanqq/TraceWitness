@@ -1,0 +1,70 @@
+[
+  {
+    "id": "tool_timeout",
+    "statement": "工具超时不得编造结果",
+    "input": {"timed_out": true, "payload": {"person": "made-up"}},
+    "expect": {"outcome": "no_result", "fabricated": false}
+  },
+  {
+    "id": "empty_search",
+    "statement": "检索无结果不得生成人员",
+    "input": {"hits": []},
+    "expect": {"person_created": false}
+  },
+  {
+    "id": "illegal_source",
+    "statement": "非法 source ID 必须失败",
+    "input": {
+      "source_id": "tw.event.other-run.000001",
+      "allowed": ["tw.event.run-w02-mock-incident-20261110.000001"]
+    },
+    "expect": {"accepted": false}
+  },
+  {
+    "id": "unreachable_track",
+    "statement": "不可达轨迹必须剔除",
+    "input": {
+      "points": [
+        {"id": "a", "reachable": false},
+        {"id": "b", "reachable": true}
+      ]
+    },
+    "expect": {"kept": ["b"]}
+  },
+  {
+    "id": "travel_conflict",
+    "statement": "旅行时间冲突必须禁止合并",
+    "input": {"travel_conflict": true},
+    "expect": {"merge": "forbidden"}
+  },
+  {
+    "id": "low_quality_face",
+    "statement": "低质量人脸不得建新档",
+    "input": {"face_quality": "0.20"},
+    "expect": {"profile_created": false}
+  },
+  {
+    "id": "bad_signature",
+    "statement": "签名失败不得加载插件",
+    "input": {"signature_valid": false},
+    "expect": {"loaded": false}
+  },
+  {
+    "id": "high_risk",
+    "statement": "高风险动作必须人工确认",
+    "input": {"action": "door_open"},
+    "expect": {"status": "pending_human", "executed": false}
+  },
+  {
+    "id": "unknown_business",
+    "statement": "未知业务不得走公网",
+    "input": {"business": "visitor_chat"},
+    "expect": {"public_network": false}
+  },
+  {
+    "id": "missing_evidence",
+    "statement": "证据文件缺失必须报错",
+    "input": {"path_exists": false},
+    "expect": {"error": "evidence_missing"}
+  }
+]

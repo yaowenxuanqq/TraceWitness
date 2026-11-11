@@ -56,6 +56,17 @@ function render(overview) {
       <p class="mono">${esc(masked.upper_color)} · ${esc(masked.posture)} · ${esc(masked.face_region)} · ${esc(item.id)}</p>
     </article>`;
   }).join("") : `<p class="muted">还没有结构化结果</p>`;
+  const routeLabel = { local: "本地", cloud: "上送云端", blocked: "不上公网" };
+  const fusionLabel = { local: "仅本地", agree: "一致", conflict: "冲突", dual_low: "双低", refused: "拒绝" };
+  const conclusionLabel = { conflict: "冲突待复核", insufficient: "证据不足", unknown_business: "未知业务不上公网" };
+  const decisions = overview.decisions || [];
+  document.getElementById("decisions").innerHTML = decisions.length ? decisions.map((item) => {
+    const conclusion = conclusionLabel[item.conclusion] || item.conclusion;
+    return `<article class="decision route-${esc(item.route)}">
+      <p><span class="badge">${esc(routeLabel[item.route] || item.route)}</span> ${esc(fusionLabel[item.fusion] || item.fusion)} · ${esc(conclusion)}${item.degraded ? " · 历史不足" : ""}</p>
+      <p class="mono">${esc(item.caseKey)} · u ${esc(item.uncertainty)} · θ ${esc(item.thetaUEff)} · q ${esc(item.qInput)} · 云端${item.cloudCalled ? "已调用" : "未调用"} · ${esc(item.id)}</p>
+    </article>`;
+  }).join("") : `<p class="muted">还没有路由决策</p>`;
 }
 
 function renderMedia(media) {

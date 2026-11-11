@@ -5,6 +5,7 @@ import com.tracewitness.platform.scenario.ScenarioService;
 import com.tracewitness.platform.store.PlatformStore;
 import com.tracewitness.platform.store.PlatformStore.RunManifest;
 import com.tracewitness.platform.store.TrackStore;
+import com.tracewitness.platform.route.RouteService;
 import com.tracewitness.platform.vision.StructureService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -27,14 +28,16 @@ public class ApiController {
     private final PlatformStore store;
     private final TrackStore tracks;
     private final StructureService structure;
+    private final RouteService routes;
 
     public ApiController(AppProperties properties, ScenarioService scenarios, PlatformStore store, TrackStore tracks,
-                         StructureService structure) {
+                         StructureService structure, RouteService routes) {
         this.properties = properties;
         this.scenarios = scenarios;
         this.store = store;
         this.tracks = tracks;
         this.structure = structure;
+        this.routes = routes;
     }
 
     @GetMapping("/health")
@@ -86,6 +89,7 @@ public class ApiController {
         body.put("toolCalls", agent == null ? Collections.emptyList() : store.listToolCalls(String.valueOf(agent.get("id"))));
         body.put("tracks", tracks.listTracks(runId));
         body.put("observations", structure.list());
+        body.put("decisions", routes.list());
         body.put("tools", tools());
         return body;
     }

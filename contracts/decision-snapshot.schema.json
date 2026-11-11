@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tracewitness.local/contracts/decision-snapshot.schema.json",
+  "title": "DecisionSnapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["policyVersion", "qObserved", "qInput", "thetaUEff", "uncertainty", "degraded", "route", "fusion", "conclusion", "cloudCalled"],
+  "properties": {
+    "policyVersion": { "type": "string", "const": "route-w06-1" },
+    "qObserved": { "type": "number" },
+    "qScripted": { "type": "number" },
+    "qInput": { "type": "number" },
+    "thetaUEff": { "type": "number" },
+    "uncertainty": { "type": "number" },
+    "degraded": { "type": "boolean" },
+    "route": { "type": "string", "enum": ["local", "cloud", "blocked"] },
+    "fusion": { "type": "string", "enum": ["local", "agree", "conflict", "dual_low", "refused"] },
+    "conclusion": { "type": "string" },
+    "cloudCalled": { "type": "boolean" }
+  }
+}
