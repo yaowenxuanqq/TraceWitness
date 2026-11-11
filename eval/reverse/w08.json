@@ -1,0 +1,99 @@
+[
+  {
+    "id": "roof-unreachable",
+    "statement": "没有通路的门点不得合并",
+    "op": "decide",
+    "input": {
+      "face_quality": "0.88",
+      "vector": ["0.99", "0.01", "0.00"],
+      "from_door": "lobby",
+      "to_door": "roof",
+      "tick_from": 400,
+      "tick_to": 401,
+      "tick_ms": 1000,
+      "profiles": [
+        {"id": "resident-chen", "gallery": "resident", "vector": ["0.99", "0.01", "0.00"]}
+      ]
+    },
+    "expect": {
+      "merge": "forbidden",
+      "reason": "unreachable",
+      "profile_created": false,
+      "travel_seconds": -1,
+      "observed_seconds": 1
+    }
+  },
+  {
+    "id": "fast-unit-b",
+    "statement": "旅行时间冲突必须禁止合并",
+    "op": "decide",
+    "input": {
+      "face_quality": "0.91",
+      "vector": ["0.99", "0.01", "0.00"],
+      "from_door": "lobby",
+      "to_door": "unit-b",
+      "tick_from": 500,
+      "tick_to": 510,
+      "tick_ms": 1000,
+      "profiles": [
+        {"id": "resident-chen", "gallery": "resident", "vector": ["0.99", "0.01", "0.00"]}
+      ]
+    },
+    "expect": {
+      "merge": "forbidden",
+      "reason": "travel_conflict",
+      "profile_created": false,
+      "travel_seconds": 70,
+      "observed_seconds": 10
+    }
+  },
+  {
+    "id": "low-quality-face",
+    "statement": "低质量人脸不得建新档",
+    "op": "decide",
+    "input": {
+      "face_quality": "0.20",
+      "vector": ["0.20", "0.20", "0.20"],
+      "from_door": "lobby",
+      "tick_from": 700,
+      "tick_ms": 1000,
+      "profiles": []
+    },
+    "expect": {
+      "merge": "none",
+      "reason": "low_quality",
+      "gallery": "none",
+      "profile_created": false
+    }
+  },
+  {
+    "id": "ambiguous-pair",
+    "statement": "双库分数过近不得自动合并",
+    "op": "decide",
+    "input": {
+      "face_quality": "0.84",
+      "vector": ["0.995", "0.100", "0.000"],
+      "from_door": "lobby",
+      "tick_from": 600,
+      "tick_ms": 1000,
+      "profiles": [
+        {"id": "resident-chen", "gallery": "resident", "vector": ["0.99", "0.01", "0.00"]},
+        {"id": "lookalike", "gallery": "stranger", "vector": ["0.98", "0.20", "0.00"]}
+      ]
+    },
+    "expect": {
+      "merge": "pending_human",
+      "reason": "ambiguous",
+      "matched_id": "resident-chen",
+      "second_id": "lookalike",
+      "profile_created": false
+    }
+  },
+  {
+    "id": "reject-merge",
+    "statement": "驳回后不得合并档案",
+    "op": "approval",
+    "input": {"status": "pending_human", "decision": "reject"},
+    "expect": {"status": "rejected", "merged": false}
+  }
+]

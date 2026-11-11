@@ -1,0 +1,72 @@
+[
+  {
+    "id": "resident-return",
+    "op": "decide",
+    "input": {
+      "face_quality": "0.86",
+      "vector": ["0.98", "0.02", "0.00"],
+      "from_door": "lobby",
+      "to_door": "unit-a",
+      "tick_from": 10,
+      "tick_to": 50,
+      "tick_ms": 1000,
+      "profiles": [
+        {"id": "resident-chen", "gallery": "resident", "vector": ["1.00", "0.00", "0.00"]}
+      ]
+    },
+    "expect": {
+      "merge": "auto",
+      "reason": "matched",
+      "gallery": "resident",
+      "matched_id": "resident-chen",
+      "profile_created": false,
+      "travel_seconds": 30,
+      "observed_seconds": 40
+    }
+  },
+  {
+    "id": "stranger-create",
+    "op": "decide",
+    "input": {
+      "face_quality": "0.70",
+      "vector": ["0.00", "1.00", "0.00"],
+      "from_door": "lobby",
+      "tick_from": 300,
+      "tick_ms": 1000,
+      "profiles": [
+        {"id": "resident-chen", "gallery": "resident", "vector": ["1.00", "0.00", "0.00"]}
+      ]
+    },
+    "expect": {
+      "merge": "none",
+      "reason": "created",
+      "gallery": "stranger",
+      "profile_created": true
+    }
+  },
+  {
+    "id": "quality-centroid",
+    "op": "centroid",
+    "input": {
+      "samples": [
+        {"quality": "0.50", "vector": ["1.00", "0.00", "0.00"]},
+        {"quality": "1.00", "vector": ["0.00", "1.00", "0.00"]}
+      ]
+    },
+    "expect": {
+      "centroid": ["0.33", "0.67", "0.00"]
+    }
+  },
+  {
+    "id": "shortest-unit-b",
+    "op": "path",
+    "input": {"from_door": "lobby", "to_door": "unit-b"},
+    "expect": {"travel_seconds": 70}
+  },
+  {
+    "id": "frequent-address",
+    "op": "address",
+    "input": {"current": null, "visits": {"lobby": 3, "unit-a": 1}},
+    "expect": {"address": "lobby", "frequency": true}
+  }
+]

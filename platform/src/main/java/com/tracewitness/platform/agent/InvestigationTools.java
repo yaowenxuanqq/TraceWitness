@@ -1,6 +1,8 @@
 package com.tracewitness.platform.agent;
 
 import com.tracewitness.platform.store.PlatformStore;
+import com.tracewitness.platform.profile.ProfileService;
+import com.tracewitness.platform.safety.ReverseRules;
 import com.tracewitness.platform.store.TrackStore;
 import org.springframework.stereotype.Service;
 
@@ -17,10 +19,12 @@ public class InvestigationTools {
 
     private final PlatformStore store;
     private final TrackStore tracks;
+    private final ProfileService profiles;
 
-    public InvestigationTools(PlatformStore store, TrackStore tracks) {
+    public InvestigationTools(PlatformStore store, TrackStore tracks, ProfileService profiles) {
         this.store = store;
         this.tracks = tracks;
+        this.profiles = profiles;
     }
 
     public Map<String, Object> execute(String runId, String toolName, Map<String, Object> arguments) {
@@ -32,11 +36,7 @@ public class InvestigationTools {
             return eventDetail(runId, args);
         }
         if ("search_person".equals(toolName)) {
-            Map<String, Object> result = base("search_person");
-            result.put("people", Collections.emptyList());
-            result.put("person_created", Boolean.FALSE);
-            result.put("source_ids", Collections.emptyList());
-            return result;
+            return searchPerson(runId, args);
         }
         if ("build_trajectory".equals(toolName)) {
             return trajectory(runId);
@@ -85,6 +85,22 @@ public class InvestigationTools {
         Map<String, Object> result = base("get_event_detail");
         result.put("event", event);
         result.put("source_ids", Collections.singletonList(eventId));
+        return result;
+    }
+
+    private Map<String, Object> searchPerson(String runId, Map<String, Object> args) {
+        String query = args.get("query") == null ? "" : String.valueOf(args.get("query"));
+        List<Map<String, Object>> people = profiles.search(runId, query);
+        Map<String, Object> rule = ReverseRules.evaluate("empty_search",
+                Collections.<String, Object>singletonMap("hits", people));
+        List<String> sourceIds = new ArrayList<String>();
+        for (Map<String, Object> person : people) {
+            sourceIds.add(String.valueOf(person.get("id")));
+        }
+        Map<String, Object> result = base("search_person");
+        result.put("people", people);
+        result.put("person_created", rule.get("person_created"));
+        result.put("source_ids", sourceIds);
         return result;
     }
 

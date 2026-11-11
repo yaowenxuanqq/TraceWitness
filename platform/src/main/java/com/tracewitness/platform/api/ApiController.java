@@ -6,12 +6,15 @@ import com.tracewitness.platform.store.PlatformStore;
 import com.tracewitness.platform.store.PlatformStore.RunManifest;
 import com.tracewitness.platform.store.TrackStore;
 import com.tracewitness.platform.route.RouteService;
+import com.tracewitness.platform.profile.ProfileService;
 import com.tracewitness.platform.vision.StructureService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.ArrayList;
@@ -29,15 +32,17 @@ public class ApiController {
     private final TrackStore tracks;
     private final StructureService structure;
     private final RouteService routes;
+    private final ProfileService profiles;
 
     public ApiController(AppProperties properties, ScenarioService scenarios, PlatformStore store, TrackStore tracks,
-                         StructureService structure, RouteService routes) {
+                         StructureService structure, RouteService routes, ProfileService profiles) {
         this.properties = properties;
         this.scenarios = scenarios;
         this.store = store;
         this.tracks = tracks;
         this.structure = structure;
         this.routes = routes;
+        this.profiles = profiles;
     }
 
     @GetMapping("/health")
@@ -90,6 +95,12 @@ public class ApiController {
         body.put("tracks", tracks.listTracks(runId));
         body.put("observations", structure.list());
         body.put("decisions", routes.list());
+        Map<String, Object> people = profiles.overview();
+        body.put("doors", people.get("doors"));
+        body.put("doorEdges", people.get("edges"));
+        body.put("profiles", people.get("profiles"));
+        body.put("tickets", people.get("tickets"));
+        body.put("audits", people.get("audits"));
         body.put("tools", tools());
         return body;
     }
@@ -147,6 +158,20 @@ public class ApiController {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).body(body);
+    }
+
+    @PostMapping("/profiles/tickets/{id}/decision")
+    public ResponseEntity<Map<String, Object>> decideTicket(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        String decision = body.get("decision") == null ? "" : String.valueOf(body.get("decision"));
+        String actor = body.get("actor") == null ? "" : String.valueOf(body.get("actor"));
+        Map<String, Object> result = profiles.decideTicket(id, decision, actor);
+        if (result == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!Boolean.TRUE.equals(result.get("applied"))) {
+            return ResponseEntity.status(409).body(result);
+        }
+        return ResponseEntity.ok(result);
     }
 
     private static Map<String, Object> manifestView(RunManifest manifest) {

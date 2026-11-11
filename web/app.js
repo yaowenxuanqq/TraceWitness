@@ -67,6 +67,70 @@ function render(overview) {
       <p class="mono">${esc(item.caseKey)} · u ${esc(item.uncertainty)} · θ ${esc(item.thetaUEff)} · q ${esc(item.qInput)} · 云端${item.cloudCalled ? "已调用" : "未调用"} · ${esc(item.id)}</p>
     </article>`;
   }).join("") : `<p class="muted">还没有路由决策</p>`;
+  renderProfiles(overview);
+}
+
+function renderProfiles(overview) {
+  const galleryLabel = { resident: "居民档", stranger: "陌生人档" };
+  const statusLabel = {
+    auto: "已自动合并",
+    pending_human: "待审批",
+    forbidden: "禁止合并",
+    approved: "已批准",
+    rejected: "已驳回",
+    open: "频次工单",
+    active: "在档",
+    merged: "已并入"
+  };
+  const doorName = {};
+  (overview.doors || []).forEach((door) => {
+    doorName[door.code] = door.name;
+  });
+  const profiles = overview.profiles || [];
+  document.getElementById("profiles").innerHTML = profiles.length ? profiles.map((item) => `
+    <article class="ticket">
+      <p><span class="badge">${esc(galleryLabel[item.gallery] || item.gallery)}</span> ${esc(item.displayName)} · ${esc(statusLabel[item.status] || item.status)}</p>
+      <p class="mono">${esc(doorName[item.addressLabel] || item.addressLabel || "无住址")} · 到访 ${esc(item.visitCount)} · 档心 ${esc(item.centroid)} · ${esc(item.id)}</p>
+    </article>
+  `).join("") : `<p class="muted">还没有档案</p>`;
+  const reasonLabel = {
+    matched: "旅行时间允许",
+    unreachable: "门点不可达",
+    travel_conflict: "旅行时间冲突",
+    ambiguous: "双库分数过近",
+    frequent_door: "同一门点频次达到 3 次",
+    created: "新建陌生人档"
+  };
+  const tickets = overview.tickets || [];
+  document.getElementById("tickets").innerHTML = tickets.map((item) => {
+    const actions = item.status === "pending_human" && item.ticketKind === "merge"
+      ? `<p><button type="button" data-decision="approve" data-id="${esc(item.id)}">批准合并</button><button type="button" data-decision="reject" data-id="${esc(item.id)}">驳回</button></p>`
+      : "";
+    const timing = item.observedSeconds == null && item.travelSeconds == null
+      ? ""
+      : ` · 观测 ${esc(item.observedSeconds)}s · 最短 ${esc(item.travelSeconds)}s`;
+    return `<article class="ticket status-${esc(item.status)}">
+      <p><span class="badge">${esc(statusLabel[item.status] || item.status)}</span> ${esc(reasonLabel[item.reason] || item.reason)} · ${esc(item.detail)}</p>
+      <p class="mono">${esc(item.caseKey)}${timing} · ${esc(item.id)}</p>
+      ${actions}
+    </article>`;
+  }).join("");
+  document.getElementById("tickets").querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      fetch("/api/profiles/tickets/" + button.dataset.id + "/decision", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision: button.dataset.decision, actor: "investigator" })
+      }).then((response) => {
+        if (!response.ok) {
+          throw new Error("审批没有写入");
+        }
+        window.location.reload();
+      }).catch((error) => {
+        button.insertAdjacentText("afterend", error.message);
+      });
+    });
+  });
 }
 
 function renderMedia(media) {
