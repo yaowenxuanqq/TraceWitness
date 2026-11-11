@@ -4,6 +4,7 @@ import com.tracewitness.platform.agent.AgentService;
 import com.tracewitness.platform.config.AppProperties;
 import com.tracewitness.platform.media.MediaService;
 import com.tracewitness.platform.scenario.ScenarioService;
+import com.tracewitness.platform.vision.StructureService;
 import com.tracewitness.platform.vision.VisionService;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -15,14 +16,16 @@ public class MockLoopRunner implements ApplicationRunner {
     private final ScenarioService scenarios;
     private final MediaService media;
     private final VisionService vision;
+    private final StructureService structure;
     private final AgentService agents;
 
     public MockLoopRunner(AppProperties properties, ScenarioService scenarios, MediaService media,
-                          VisionService vision, AgentService agents) {
+                          VisionService vision, StructureService structure, AgentService agents) {
         this.properties = properties;
         this.scenarios = scenarios;
         this.media = media;
         this.vision = vision;
+        this.structure = structure;
         this.agents = agents;
     }
 
@@ -34,6 +37,7 @@ public class MockLoopRunner implements ApplicationRunner {
         scenarios.ensure();
         media.ensure();
         vision.ensure();
+        structure.ensure();
         agents.investigate();
     }
 }

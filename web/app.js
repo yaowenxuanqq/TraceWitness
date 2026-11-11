@@ -41,6 +41,21 @@ function render(overview) {
     const last = points[points.length - 1] || {};
     return `<p class="mono">${esc(track.id)} · ${esc(track.pointCount)} 点 · x ${esc(first.x)} → ${esc(last.x)}</p>`;
   }).join("") : `<p class="muted">还没有轨迹</p>`;
+  const observations = overview.observations || [];
+  const modeLabel = {
+    preferred: "优选帧",
+    gate_failure: "门控回退",
+    track_break: "跟踪中断",
+    inference_error: "推理异常"
+  };
+  document.getElementById("observations").innerHTML = observations.length ? observations.map((item) => {
+    const masked = item.masked || {};
+    return `<article class="observation mode-${esc(item.mode)}">
+      <img src="${esc(item.thumbnailUrl)}" alt="${esc(modeLabel[item.mode] || item.mode)}">
+      <p><span class="badge">${esc(modeLabel[item.mode] || item.mode)}</span> ${esc(item.frameKind)} · 帧 ${esc(item.chosenFrame)} · 属性调用 ${esc(item.attributeCalls)}</p>
+      <p class="mono">${esc(masked.upper_color)} · ${esc(masked.posture)} · ${esc(masked.face_region)} · ${esc(item.id)}</p>
+    </article>`;
+  }).join("") : `<p class="muted">还没有结构化结果</p>`;
 }
 
 function renderMedia(media) {

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tracewitness.local/contracts/structured-observation.schema.json",
+  "title": "StructuredObservation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "frameKind", "chosenFrame", "attributeCalls", "masked"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["preferred", "gate_failure", "track_break", "inference_error"]
+    },
+    "frameKind": { "type": "string", "enum": ["crop", "full_frame"] },
+    "chosenFrame": { "type": "integer", "minimum": 0 },
+    "attributeCalls": { "type": "integer", "const": 1 },
+    "masked": {
+      "type": "object",
+      "required": ["subject_token", "face_region"],
+      "properties": {
+        "subject_token": { "type": "string" },
+        "face_region": { "type": "string", "const": "redacted" },
+        "upper_color": { "type": "string" },
+        "posture": { "type": "string" }
+      }
+    }
+  }
+}

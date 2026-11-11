@@ -11,6 +11,7 @@ from app.adapters import (
     select_tool,
 )
 from app.vision import SAMPLE_FRAMES, analyze_sample
+from app.attributes import structure_case
 
 app = FastAPI(title="TraceWitness AI")
 
@@ -57,6 +58,16 @@ def vision_track(body: dict):
         width = int(body.get("frame_width") or 1920)
         height = int(body.get("frame_height") or 1080)
         return analyze_sample(frames, width, height)
+
+    return _call(action)
+
+
+@app.post("/v1/vision/structure")
+def vision_structure(body: dict):
+    def action():
+        require_clock(body)
+        case_key = body.get("case_key") or "live"
+        return structure_case(case_key, body.get("points") or [], body.get("faults") or [])
 
     return _call(action)
 
