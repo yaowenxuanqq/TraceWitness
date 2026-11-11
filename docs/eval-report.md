@@ -37,25 +37,25 @@
 - `EvalSuiteWeek11Test` 通过。其中 20 条正向策略场景（`w08`、`w09`、`w10`）的期望字段与策略输出一致。`w07.json` 的 10 条只检查工具列表非空，这次没有测量 Agent 任务完成率。反向 20 条的期望字段与规则输出一致。
 - `PluginPolicyTest` 通过。`w11.json` 的 5 条验签期望与 `PluginPolicy` 一致。同一测试断言 1000 次验签在 2000 毫秒内完成；精确耗时没有单独打印。
 - `eval/holdout/` 里有 1 个场景文件。`HoldoutTest` 通过时，这 10 条按封存场景计入本次平台测试，开发场景文件没有因此改写。
-- 一万条向量检索：vectors=10000 dim=3 repeats=15 p50_ms=28 p95_ms=45 target_p95_ms=1000
+- 一万条向量检索：vectors=10000 dim=3 repeats=15 p50_ms=17 p95_ms=29 target_p95_ms=1000
 
 ## Python
 
 ```text
 .................                                                        [100%]
-17 passed in 2.66s
+17 passed in 2.05s
 ```
 
 ```text
-detect_fps_640=90.54 target=5
+detect_fps_640=237.89 target=5
 ```
 
 四路检测退出码 0。
 
 ```text
 streams=4 frames=20 width=1920
-fps=23.42,36.38,16.43,63.69
-min=16.43 p50=29.90 p95=59.60 target_min=2
+fps=21.93,22.78,91.77,268.79
+min=21.93 p50=57.27 p95=242.24 target_min=2
 ```
 
 ## 未测项
