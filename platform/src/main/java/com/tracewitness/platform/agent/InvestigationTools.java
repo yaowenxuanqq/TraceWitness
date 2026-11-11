@@ -36,6 +36,13 @@ public class InvestigationTools {
 
     public Map<String, Object> execute(String runId, String toolName, Map<String, Object> arguments) {
         Map<String, Object> args = arguments == null ? new LinkedHashMap<String, Object>() : arguments;
+        if (!NAMES.contains(toolName)) {
+            return failed(toolName, "unknown_tool");
+        }
+        String rejected = ToolSchemas.reject(toolName, args);
+        if (rejected != null) {
+            return failed(toolName, rejected);
+        }
         if ("search_events".equals(toolName)) {
             return searchEvents(runId, args);
         }

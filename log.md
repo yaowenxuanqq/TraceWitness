@@ -1,3 +1,52 @@
+## 2026-11-11 16:50 - 审计项：脚本、绑定、契约和窄屏
+- 修改人：AI助手
+- 影响文件：
+  - run_eval.bat （修改）
+  - run_mock.bat （修改）
+  - run_demo.bat （修改）
+  - scripts/write_eval_report.py （修改）
+  - platform/src/main/resources/application.yml （修改）
+  - platform/src/main/java/com/tracewitness/platform/agent/ToolSchemas.java （新增）
+  - platform/src/main/java/com/tracewitness/platform/agent/InvestigationTools.java （修改）
+  - platform/src/test/java/com/tracewitness/platform/ToolSchemasTest.java （新增）
+  - ai-service/app/adapters.py （修改）
+  - ai-service/requirements.txt （修改）
+  - ai-service/tests/test_schema.py （新增）
+  - web/index.html （修改）
+  - web/styles.css （修改）
+  - docs/environment.md （修改）
+  - docs/deploy.md （修改）
+  - log.md （修改）
+- 变更概要：
+  - 评测和 mock 启动固定 Java 8，Gradle 在 platform 目录执行，评测报告不再采用旧测试结果
+  - 平台只听 127.0.0.1；报告和工具参数多出来的字段会被拒绝；窄屏不再把长 ID 排成竖列
+- 关联需求：审计 P0-02、P0-03、P1-02、P1-03、P1-04
+
+## 2026-11-11 16:40 - 第 12 周交付
+- 修改人：AI助手
+- 影响文件：
+  - platform/src/main/java/com/tracewitness/platform/api/ApiController.java （修改）
+  - platform/src/main/java/com/tracewitness/platform/bootstrap/MockLoopRunner.java （修改）
+  - web/index.html （修改）
+  - web/app.js （修改）
+  - run_eval.bat （修改）
+  - scripts/write_eval_report.py （新增）
+  - docs/eval-report.md （由评测脚本生成）
+  - docs/resume.md （由评测脚本生成）
+  - docs/deploy.md （新增）
+  - docs/public-boundary.md （新增）
+  - docs/demo-script.md （新增）
+  - docs/architecture.md （修改）
+  - docs/api.md （修改）
+  - docs/environment.md （修改）
+  - README.md （修改）
+  - contracts/README.md （修改）
+  - log.md （修改）
+- 变更概要：
+  - 已有插件验签接到启动、首页和回滚入口，没有新增插件能力
+  - 评测脚本按当次测试结果写报告；未封存的回归场景和未测的任务完成率写在失败项里
+- 关联需求：w12
+
 ## 2026-11-11 15:30 - 第 10 周轨迹、证据与难例
 - 修改人：AI助手
 - 影响文件：

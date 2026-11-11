@@ -5,8 +5,11 @@ posts to the configured OpenAI-compatible chat endpoint. Business time stays wit
 """
 
 import json
+from pathlib import Path
 from typing import Optional, Protocol
 from urllib import error, request
+
+from jsonschema import Draft202012Validator
 
 P0_TOOLS = (
     "search_events",
@@ -219,12 +222,31 @@ def require_clock(body: dict) -> None:
 
 def select_tool(body: dict, adapter: ModelAdapter) -> dict:
     require_clock(body)
-    return adapter.select_tool(
+    plan = adapter.select_tool(
         body.get("task") or "",
         list(body.get("tools") or []),
         list(body.get("tool_results") or []),
         int(body.get("model_seed") or 20261110),
     )
+    return validate_tool_calls(plan)
+
+
+def validate_tool_calls(plan: dict) -> dict:
+    if not isinstance(plan, dict):
+        raise ValueError("tool plan must be an object")
+    calls = plan.get("tool_calls") or []
+    if not isinstance(calls, list):
+        raise ValueError("tool_calls must be a list")
+    for call in calls:
+        name = call.get("tool_name")
+        schema = TOOL_PARAMETERS.get(name)
+        if schema is None:
+            raise ValueError("unknown tool " + str(name))
+        arguments = call.get("arguments") or {}
+        errors = sorted(Draft202012Validator(schema).iter_errors(arguments), key=lambda item: list(item.path))
+        if errors:
+            raise ValueError("tool arguments: " + errors[0].message)
+    return plan
 
 
 def draft_report(body: dict, adapter: ModelAdapter) -> dict:
@@ -241,28 +263,14 @@ def draft_report(body: dict, adapter: ModelAdapter) -> dict:
 def validate_report(report: dict) -> dict:
     if not isinstance(report, dict):
         raise ValueError("report must be an object")
-    conclusion = report.get("conclusion")
-    source_ids = report.get("source_ids")
-    confidence = report.get("confidence")
-    insufficient = report.get("insufficient_evidence")
-    actions = report.get("requested_actions")
-    if not isinstance(conclusion, str) or not isinstance(source_ids, list) or not isinstance(actions, list):
-        raise ValueError("report fields missing")
-    if not all(isinstance(item, str) for item in source_ids):
-        raise ValueError("source_ids must be strings")
-    if isinstance(confidence, bool) or not isinstance(confidence, (int, float)) or not 0 <= float(confidence) <= 1:
-        raise ValueError("confidence out of range")
-    if not isinstance(insufficient, bool):
-        raise ValueError("insufficient_evidence must be boolean")
-    if not source_ids and not insufficient:
+    schema_path = Path(__file__).resolve().parents[2] / "contracts" / "agent-report.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    errors = sorted(Draft202012Validator(schema).iter_errors(report), key=lambda item: list(item.path))
+    if errors:
+        raise ValueError("report schema: " + errors[0].message)
+    if not report["source_ids"] and not report["insufficient_evidence"]:
         raise ValueError("empty source_ids require insufficient_evidence")
-    return {
-        "conclusion": conclusion,
-        "source_ids": source_ids,
-        "confidence": float(confidence),
-        "insufficient_evidence": insufficient,
-        "requested_actions": actions,
-    }
+    return report
 
 
 def _function(name: str) -> dict:

@@ -22,13 +22,13 @@
 | Node | v24.20.0 | 不阻塞。前端从第 2 周开始 |
 | Git | 2.55.0.windows.5 | 已可用 |
 
-`run_mock.bat` 使用 PATH 上的 Java，不下载、也不切换到 Java 21。Gradle Wrapper 使用 7.6.4 的华为云镜像，因为 `services.gradle.org` 在这台机器上连接超时。依赖仓库同样先走阿里云，再回退 Maven Central。
+`run_mock.bat` 和 `run_eval.bat` 会寻找 Java 8。本机 `JAVA_HOME` 如果指向 Java 21，脚本改用 `JAVA_HOME_8`，或 `C:\Program Files\Eclipse Adoptium\jdk-8*`。找不到 Java 8 就停止，不用 PATH 上碰巧出现的 `java`。Gradle Wrapper 使用 7.6.4 的华为云镜像，因为 `services.gradle.org` 在这台机器上连接超时。依赖仓库同样先走阿里云，再回退 Maven Central。
 
 ## 端口
 
 | 进程 | 端口 |
 |---|---|
-| Java 平台 | 8080 |
+| Java 平台 | 127.0.0.1:8080 |
 | Python AI 服务 | 8000 |
 
 `run_mock.bat` 会启动这两个服务。端口已有进程监听时，脚本停止并提示，避免接到别的程序上。
@@ -52,7 +52,7 @@
 |---|---|
 | `run_demo.bat` | 不启动服务，也不调用模型。真实模型仍由项目所有者配置 |
 | `run_mock.bat` | 启动 Python 和 Java，跑通 mock 事件到报告，并标出 `MOCK_MODE` |
-| `run_eval.bat` | 打印固定评测清单。场景打分从第 6 周开始 |
+| `run_eval.bat` | 跑平台测试、Python 测试和检测计时，并写出 `docs/eval-report.md` |
 
 脚本用 `%~dp0` 定位仓库根目录。失败时停留在 `pause`，避免双击后窗口立刻消失。成功时直接退出，方便以后串进评测。
 

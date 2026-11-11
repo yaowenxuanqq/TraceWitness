@@ -7,11 +7,8 @@ set "REPO=%CD%"
 set "TRACEWITNESS_DB=jdbc:h2:file:%REPO:\=/%/data/local/tracewitness"
 
 echo MOCK_MODE
-java -version
-if errorlevel 1 (
-  echo Java was not found on PATH.
-  goto fail
-)
+call :use_java8
+if errorlevel 1 goto fail
 
 call :require_free 8080
 if errorlevel 1 goto fail
@@ -29,7 +26,7 @@ start "tracewitness-ai" /D "%REPO%\ai-service" cmd /c ".venv\Scripts\python.exe 
 call :wait_url http://127.0.0.1:8000/health
 if errorlevel 1 goto fail
 
-start "tracewitness-platform" /D "%REPO%" cmd /c "platform\gradlew.bat bootRun"
+start "tracewitness-platform" /D "%REPO%\platform" cmd /c "set JAVA_HOME=%JAVA_HOME%&& set PATH=%JAVA_HOME%\bin;%%PATH%%&& gradlew.bat bootRun"
 call :wait_url http://127.0.0.1:8080/api/health
 if errorlevel 1 goto fail
 
@@ -37,9 +34,27 @@ echo [mock] Open http://127.0.0.1:8080/
 echo [mock] done. This run does not count as an Agent metric.
 exit /b 0
 
+:use_java8
+set "JAVA_HOME="
+if defined JAVA_HOME_8 set "JAVA_HOME=%JAVA_HOME_8%"
+if not defined JAVA_HOME if exist "C:\Program Files\Eclipse Adoptium\jdk-8.0.504.1-hotspot\bin\java.exe" set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-8.0.504.1-hotspot"
+if not defined JAVA_HOME for /d %%D in ("C:\Program Files\Eclipse Adoptium\jdk-8*") do if exist "%%D\bin\java.exe" set "JAVA_HOME=%%~fD"
+if not defined JAVA_HOME for /d %%D in ("C:\Program Files\Java\jdk1.8*") do if exist "%%D\bin\java.exe" set "JAVA_HOME=%%~fD"
+if not defined JAVA_HOME (
+  echo [java] Java 8 was not found. Set JAVA_HOME_8 to a JDK 8 directory.
+  exit /b 1
+)
+"%JAVA_HOME%\bin\java.exe" -version 2>&1 | findstr /C:"1.8.0" >nul
+if errorlevel 1 (
+  echo [java] %JAVA_HOME% is not Java 8.
+  exit /b 1
+)
+set "PATH=%JAVA_HOME%\bin;%PATH%"
+exit /b 0
+
 :fail
 echo [mock] failed
-pause
+if not defined NO_PAUSE pause
 exit /b 1
 
 :require_free

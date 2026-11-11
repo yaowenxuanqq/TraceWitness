@@ -51,7 +51,8 @@ section {
 }
 
 .muted { color: var(--muted); }
-.mono { font-family: Consolas, monospace; font-size: 13px; word-break: break-all; }
+.mono, td, p { overflow-wrap: anywhere; }
+.mono { font-family: Consolas, monospace; font-size: 13px; }
 
 table { width: 100%; border-collapse: collapse; }
 th, td {
@@ -64,7 +65,7 @@ th { color: var(--muted); font-weight: 600; font-size: 13px; }
 
 audio, video { width: 100%; margin-top: 8px; }
 #clip-frame { width: 320px; max-width: 100%; margin-top: 12px; background: #000; display: block; }
-form { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
+form { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 16px; }
 button {
   background: var(--amber);
   color: var(--amber-ink);
@@ -102,7 +103,18 @@ button {
 .ticket { border-top: 1px solid var(--line); padding: 10px 0; }
 .ticket p { margin: 0 0 6px; }
 .ticket button { margin-right: 8px; }
-.trail { width: 100%; height: 220px; background: #0c1411; border: 1px solid var(--line); }
-.trail text { fill: #93a79c; font-size: 4px; }
+.trail { width: 100%; max-width: 100%; height: 220px; background: #0c1411; border: 1px solid var(--line); }
+.trail text { fill: #e8f2ec; font-size: 4px; }
+
+@media (max-width: 640px) {
+  main { padding: 16px 12px 32px; }
+  h1 { font-size: 26px; }
+  section { padding: 12px; }
+  table, thead, tbody, tr, th, td { display: block; width: 100%; }
+  thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  tr { border-bottom: 1px solid var(--line); padding: 8px 0; }
+  td { border-bottom: 0; padding: 2px 0; }
+  #clip-frame { width: 100%; }
+}
 .status-forbidden .badge, .status-rejected .badge { background: #7a483e; }
 .status-pending_human .badge, .status-open .badge { background: var(--amber); color: var(--amber-ink); }
