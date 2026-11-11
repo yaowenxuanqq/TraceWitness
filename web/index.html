@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TraceWitness</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="banner" class="banner">MOCK_MODE</div>
+  <main>
+    <header>
+      <p class="eyebrow">TraceWitness</p>
+      <h1>模拟调查</h1>
+      <p id="task" class="muted"></p>
+    </header>
+    <section>
+      <h2>报告</h2>
+      <p id="conclusion"></p>
+      <p id="sources" class="mono"></p>
+    </section>
+    <section>
+      <h2>事件</h2>
+      <table>
+        <thead><tr><th>时间</th><th>类型</th><th>摘要</th><th>ID</th></tr></thead>
+        <tbody id="events"></tbody>
+      </table>
+    </section>
+    <section>
+      <h2>工具调用</h2>
+      <table>
+        <thead><tr><th>工具</th><th>引用</th><th>调用 ID</th></tr></thead>
+        <tbody id="tools"></tbody>
+      </table>
+    </section>
+    <section>
+      <h2>点位与设备</h2>
+      <div id="places"></div>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

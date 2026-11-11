@@ -1,0 +1,38 @@
+{
+  "sites": [
+    {
+      "code": "north-gate",
+      "name": "北门",
+      "xM": 12.3456,
+      "yM": 7.8912
+    }
+  ],
+  "devices": [
+    {
+      "code": "cam-north",
+      "siteCode": "north-gate",
+      "kind": "camera",
+      "name": "北门摄像机"
+    }
+  ],
+  "events": [
+    {
+      "tick": 1,
+      "deviceCode": "cam-north",
+      "eventType": "PERSON_ENTER",
+      "summary": "北门出现一名人员"
+    },
+    {
+      "tick": 2,
+      "deviceCode": "cam-north",
+      "eventType": "LOITER",
+      "summary": "该人员在北门停留"
+    },
+    {
+      "tick": 3,
+      "deviceCode": "cam-north",
+      "eventType": "PERSON_EXIT",
+      "summary": "该人员离开北门"
+    }
+  ]
+}

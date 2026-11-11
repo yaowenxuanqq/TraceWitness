@@ -1,0 +1,33 @@
+server:
+  port: 8080
+  error:
+    include-message: always
+
+spring:
+  application:
+    name: tracewitness-platform
+  datasource:
+    url: ${TRACEWITNESS_DB:jdbc:h2:file:./data/local/tracewitness}
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  flyway:
+    enabled: true
+  web:
+    resources:
+      static-locations: file:web/
+  servlet:
+    multipart:
+      max-file-size: 32MB
+      max-request-size: 32MB
+
+tracewitness:
+  mode: ${TRACEWITNESS_MODE:MOCK}
+  ai-base-url: ${TRACEWITNESS_AI_BASE_URL:http://127.0.0.1:8000}
+  auto-loop: true
+  eval:
+    scenario-id: w02-mock-incident
+    epoch-start: "2026-01-01T00:00:00.000Z"
+    tick-ms: 1000
+    master-seed: 20261110
+    task: "调查北门刚刚发生了什么"

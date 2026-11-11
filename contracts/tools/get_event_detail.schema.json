@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "get_event_detail",
+  "description": "第 7 周由 Java 按本次 run 读取一条事件。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["event_id"],
+  "properties": {
+    "event_id": { "type": "string" }
+  }
+}

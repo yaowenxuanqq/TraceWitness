@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tracewitness.local/contracts/event.schema.json",
+  "title": "Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "runId", "deviceId", "siteId", "eventType", "summary", "occurredAt", "tick"],
+  "properties": {
+    "id": { "type": "string" },
+    "runId": { "type": "string" },
+    "deviceId": { "type": "string" },
+    "siteId": { "type": "string" },
+    "eventType": { "type": "string" },
+    "summary": { "type": "string" },
+    "occurredAt": { "type": "string" },
+    "tick": { "type": "integer", "minimum": 0 }
+  }
+}

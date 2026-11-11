@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tracewitness.local/contracts/agent-report.schema.json",
+  "title": "AgentReport",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["conclusion", "source_ids", "confidence", "insufficient_evidence", "requested_actions"],
+  "properties": {
+    "conclusion": { "type": "string" },
+    "source_ids": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "insufficient_evidence": { "type": "boolean" },
+    "requested_actions": { "type": "array" }
+  }
+}
