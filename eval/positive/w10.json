@@ -1,0 +1,168 @@
+[
+  {
+    "id": "path-kept",
+    "op": "trajectory",
+    "input": {
+      "points": [
+        {"id": "a", "profile": "chen", "door": "lobby", "at": 0},
+        {"id": "b", "profile": "chen", "door": "unit-a", "at": 30},
+        {"id": "c", "profile": "chen", "door": "unit-b", "at": 70}
+      ]
+    },
+    "expect": {
+      "kept": ["a", "b", "c"],
+      "dropped": [],
+      "thinned": [],
+      "map": [
+        {"id": "a", "door": "lobby", "x": 40, "y": 80},
+        {"id": "b", "door": "unit-a", "x": 40, "y": 40},
+        {"id": "c", "door": "unit-b", "x": 80, "y": 40}
+      ]
+    }
+  },
+  {
+    "id": "roof-dropped",
+    "op": "trajectory",
+    "input": {
+      "points": [
+        {"id": "a", "profile": "chen", "door": "lobby", "at": 0},
+        {"id": "b", "profile": "chen", "door": "roof", "at": 20}
+      ]
+    },
+    "expect": {
+      "kept": ["a"],
+      "dropped": [{"id": "b", "reason": "unreachable"}],
+      "map": [{"id": "a", "door": "lobby", "x": 40, "y": 80}]
+    }
+  },
+  {
+    "id": "fast-dropped",
+    "op": "trajectory",
+    "input": {
+      "points": [
+        {"id": "a", "profile": "chen", "door": "lobby", "at": 0},
+        {"id": "b", "profile": "chen", "door": "unit-b", "at": 10}
+      ]
+    },
+    "expect": {
+      "kept": ["a"],
+      "dropped": [{"id": "b", "reason": "travel_conflict"}]
+    }
+  },
+  {
+    "id": "thin-dwell",
+    "op": "trajectory",
+    "input": {
+      "points": [
+        {"id": "a", "profile": "chen", "door": "lobby", "at": 0},
+        {"id": "b", "profile": "chen", "door": "lobby", "at": 10},
+        {"id": "c", "profile": "chen", "door": "lobby", "at": 20},
+        {"id": "d", "profile": "chen", "door": "stair", "at": 40}
+      ]
+    },
+    "expect": {
+      "kept": ["a", "b", "c", "d"],
+      "dropped": [],
+      "thinned": ["b", "c"],
+      "map": [
+        {"id": "a", "door": "lobby", "x": 40, "y": 80},
+        {"id": "d", "door": "stair", "x": 10, "y": 50}
+      ]
+    }
+  },
+  {
+    "id": "companions-hit",
+    "op": "companions",
+    "input": {
+      "window_seconds": 60,
+      "visits": [
+        {"profile": "chen", "door": "lobby", "at": 100},
+        {"profile": "jia", "door": "lobby", "at": 130}
+      ]
+    },
+    "expect": {
+      "companions": [
+        {"left": "chen", "right": "jia", "door": "lobby", "gap_seconds": 30}
+      ]
+    }
+  },
+  {
+    "id": "companions-far",
+    "op": "companions",
+    "input": {
+      "window_seconds": 60,
+      "visits": [
+        {"profile": "chen", "door": "lobby", "at": 100},
+        {"profile": "jia", "door": "lobby", "at": 220}
+      ]
+    },
+    "expect": {
+      "companions": []
+    }
+  },
+  {
+    "id": "package-valid",
+    "op": "evidence",
+    "input": {
+      "trajectory_id": "traj-walk",
+      "points": ["a", "b"],
+      "companions": [{"left": "chen", "right": "jia", "door": "lobby", "gap_seconds": 30}],
+      "sources": [{"id": "clip-1", "exists": true}]
+    },
+    "expect": {
+      "error": "",
+      "digest": "9737cf47c9310b6aa1a2c9c82a090bcd27f2587fc3bf20a1d4d06f52a89f67cd",
+      "valid": true,
+      "tampered_valid": false
+    }
+  },
+  {
+    "id": "package-missing",
+    "op": "evidence",
+    "input": {
+      "trajectory_id": "traj-walk",
+      "points": ["a"],
+      "companions": [],
+      "sources": [{"id": "missing-clip", "exists": false}]
+    },
+    "expect": {
+      "error": "evidence_missing",
+      "digest": null,
+      "valid": false,
+      "tampered_valid": false
+    }
+  },
+  {
+    "id": "hard-export",
+    "op": "hard_case",
+    "input": {
+      "cases": [
+        {"id": "hc1", "reason": "unreachable", "label": "true_negative"},
+        {"id": "hc2", "reason": "low_quality", "label": ""}
+      ]
+    },
+    "expect": {
+      "unlabeled": 1,
+      "exported": [
+        {"id": "hc1", "reason": "unreachable", "label": "true_negative"}
+      ]
+    }
+  },
+  {
+    "id": "model-compare",
+    "op": "compare",
+    "input": {
+      "candidates": [
+        {"name": "local-small", "score": "0.62"},
+        {"name": "cloud-script", "score": "0.81"}
+      ]
+    },
+    "expect": {
+      "trained": false,
+      "winner": "cloud-script",
+      "left_score": "0.62",
+      "right_score": "0.81",
+      "delta": "0.19"
+    }
+  }
+]

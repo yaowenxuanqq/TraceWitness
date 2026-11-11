@@ -6,6 +6,7 @@ import com.tracewitness.platform.media.MediaService;
 import com.tracewitness.platform.route.RouteService;
 import com.tracewitness.platform.profile.ProfileService;
 import com.tracewitness.platform.retrieval.RetrievalService;
+import com.tracewitness.platform.trajectory.TrajectoryService;
 import com.tracewitness.platform.scenario.ScenarioService;
 import com.tracewitness.platform.vision.StructureService;
 import com.tracewitness.platform.vision.VisionService;
@@ -23,11 +24,13 @@ public class MockLoopRunner implements ApplicationRunner {
     private final RouteService routes;
     private final ProfileService profiles;
     private final RetrievalService retrieval;
+    private final TrajectoryService trajectories;
     private final AgentService agents;
 
     public MockLoopRunner(AppProperties properties, ScenarioService scenarios, MediaService media,
                           VisionService vision, StructureService structure, RouteService routes,
-                          ProfileService profiles, RetrievalService retrieval, AgentService agents) {
+                          ProfileService profiles, RetrievalService retrieval, TrajectoryService trajectories,
+                          AgentService agents) {
         this.properties = properties;
         this.scenarios = scenarios;
         this.media = media;
@@ -36,6 +39,7 @@ public class MockLoopRunner implements ApplicationRunner {
         this.routes = routes;
         this.profiles = profiles;
         this.retrieval = retrieval;
+        this.trajectories = trajectories;
         this.agents = agents;
     }
 
@@ -51,6 +55,7 @@ public class MockLoopRunner implements ApplicationRunner {
         routes.ensure();
         profiles.ensure();
         retrieval.ensure();
+        trajectories.ensure();
         agents.investigate();
     }
 }

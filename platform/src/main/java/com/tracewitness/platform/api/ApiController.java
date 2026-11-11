@@ -8,6 +8,7 @@ import com.tracewitness.platform.store.TrackStore;
 import com.tracewitness.platform.route.RouteService;
 import com.tracewitness.platform.profile.ProfileService;
 import com.tracewitness.platform.retrieval.RetrievalService;
+import com.tracewitness.platform.trajectory.TrajectoryService;
 import com.tracewitness.platform.vision.StructureService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -35,10 +36,11 @@ public class ApiController {
     private final RouteService routes;
     private final ProfileService profiles;
     private final RetrievalService retrieval;
+    private final TrajectoryService trajectories;
 
     public ApiController(AppProperties properties, ScenarioService scenarios, PlatformStore store, TrackStore tracks,
                          StructureService structure, RouteService routes, ProfileService profiles,
-                         RetrievalService retrieval) {
+                         RetrievalService retrieval, TrajectoryService trajectories) {
         this.properties = properties;
         this.scenarios = scenarios;
         this.store = store;
@@ -47,6 +49,7 @@ public class ApiController {
         this.routes = routes;
         this.profiles = profiles;
         this.retrieval = retrieval;
+        this.trajectories = trajectories;
     }
 
     @GetMapping("/health")
@@ -108,6 +111,12 @@ public class ApiController {
         Map<String, Object> search = retrieval.overview();
         body.put("queries", search.get("queries"));
         body.put("passages", search.get("passages"));
+        Map<String, Object> trail = trajectories.overview();
+        body.put("trajectories", trail.get("trajectories"));
+        body.put("companions", trail.get("companions"));
+        body.put("packages", trail.get("packages"));
+        body.put("hardCases", trail.get("hardCases"));
+        body.put("compares", trail.get("compares"));
         body.put("tools", tools());
         return body;
     }
@@ -193,6 +202,35 @@ public class ApiController {
             return ResponseEntity.status(409).body(result);
         }
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/evidence/{id}/verify")
+    public ResponseEntity<Map<String, Object>> verifyEvidence(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        String manifest = body.get("manifest") == null ? null : String.valueOf(body.get("manifest"));
+        Map<String, Object> result = trajectories.verify(id, manifest);
+        if (result == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/hard-cases/{id}/label")
+    public ResponseEntity<Map<String, Object>> labelHardCase(@PathVariable String id, @RequestBody Map<String, Object> body) {
+        String label = body.get("label") == null ? "" : String.valueOf(body.get("label"));
+        String actor = body.get("actor") == null ? "" : String.valueOf(body.get("actor"));
+        Map<String, Object> result = trajectories.label(id, label, actor);
+        if (result == null) {
+            return ResponseEntity.notFound().build();
+        }
+        if (!Boolean.TRUE.equals(result.get("applied"))) {
+            return ResponseEntity.status(409).body(result);
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/hard-cases/export")
+    public List<Map<String, Object>> exportHardCases() {
+        return trajectories.exportHardCases(scenarios.runId());
     }
 
     private static Map<String, Object> manifestView(RunManifest manifest) {

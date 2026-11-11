@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 
 from app.adapters import (
     MockAdapter,
+    ModelCallFailed,
     ModelNotConfigured,
     OpenAICompatibleAdapter,
     draft_report,
@@ -75,7 +76,7 @@ def vision_structure(body: dict):
 def _call(action):
     try:
         return action()
-    except ModelNotConfigured as exc:
+    except (ModelNotConfigured, ModelCallFailed) as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc

@@ -10,7 +10,7 @@ The project is designed as a real Agent application rather than a chat-only demo
 
 ## Status
 
-Planning and early implementation. The current 12-week delivery plan is available in [docs/project-plan.md](docs/project-plan.md).
+Week 10 runs on the machine's installed Java 8. `run_mock.bat` still shows `MOCK_MODE`. The platform covers routing, tool-calling investigation, profiles, retrieval, trajectories, evidence verification, and hard cases. See [docs/architecture.md](docs/architecture.md) and [docs/api.md](docs/api.md).
 
 ## Planned Architecture
 
@@ -34,7 +34,7 @@ Local runtime
     |- local media/evidence storage
     |- deterministic device/event simulator
     |- in-process queue and outbox
-    |- llama.cpp + local GGUF model when available
+    |- owner-configured OpenAI-compatible model API
 ```
 
 ## Software-only Boundary
@@ -64,7 +64,7 @@ docs/           Public architecture and planning documents
 scripts/        Local setup and development scripts
 ```
 
-The layout will be introduced incrementally as implementation starts.
+`platform/` is the Java service, `ai-service/` is the Python agent, `web/` is the browser page, and `contracts/` holds the tool and report shapes. `eval/positive/` and `eval/reverse/` hold the scenario files. `run_mock.bat` starts the mock loop.
 
 ## Data and Privacy
 

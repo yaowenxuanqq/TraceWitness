@@ -69,6 +69,7 @@ function render(overview) {
   }).join("") : `<p class="muted">还没有路由决策</p>`;
   renderProfiles(overview);
   renderRetrieval(overview);
+  renderTrails(overview);
 }
 
 function renderRetrieval(overview) {
@@ -114,6 +115,100 @@ function renderRetrieval(overview) {
       });
     });
   });
+}
+
+function renderTrails(overview) {
+  const doorName = { lobby: "大堂", "unit-a": "一单元门", "unit-b": "二单元门", stair: "楼梯间", roof: "屋顶" };
+  const reasonLabel = { unreachable: "不可达", travel_conflict: "旅行时间不足", unknown_door: "未知门点", thinned: "抽稀" };
+  const trails = overview.trajectories || [];
+  document.getElementById("trails").innerHTML = trails.length ? trails.map((trail) => {
+    const points = trail.points || [];
+    const line = points.filter((point) => point.kept && !point.thinned);
+    const dropped = points.filter((point) => !point.kept).map((point) =>
+      `${doorName[point.doorCode] || point.doorCode} · ${reasonLabel[point.reason] || point.reason}`
+    );
+    return `<article class="ticket">
+      <p><span class="badge">${esc(trail.caseKey)}</span> ${esc(trail.profileCode)} · 保留 ${esc(trail.keptCount)} · 剔除 ${esc(trail.droppedCount)} · 地图 ${esc(trail.thinCount)}</p>
+      <svg class="trail" viewBox="0 0 100 100" role="img" aria-label="${esc(trail.caseKey)}">
+        <polyline points="${line.map((point) => `${point.x},${point.y}`).join(" ")}" fill="none" stroke="#e2a84b" stroke-width="1.5"></polyline>
+        ${line.map((point) => `<circle cx="${point.x}" cy="${point.y}" r="1.8" fill="#e8f2ec"></circle><text x="${Number(point.x) + 2}" y="${point.y}">${esc(doorName[point.doorCode] || point.doorCode)}</text>`).join("")}
+      </svg>
+      <p class="mono">${dropped.length ? "剔除 " + dropped.map(esc).join("；") : "没有剔除点"}</p>
+    </article>`;
+  }).join("") : `<p class="muted">还没有时空轨迹</p>`;
+  const companions = overview.companions || [];
+  document.getElementById("companions").innerHTML = companions.length ? companions.map((item) => `
+    <article class="ticket">
+      <p><span class="badge">同行</span> ${esc(item.leftCode)} 与 ${esc(item.rightCode)}</p>
+      <p class="mono">${esc(doorName[item.doorCode] || item.doorCode)} · 间隔 ${esc(item.gapSeconds)} 秒 · ${esc(item.id)}</p>
+    </article>
+  `).join("") : `<p class="muted">这个时间窗里没有同行</p>`;
+  const packages = overview.packages || [];
+  document.getElementById("packages").innerHTML = packages.length ? packages.map((item) => {
+    const actions = item.status === "valid"
+      ? `<p><button type="button" data-kind="verify" data-id="${esc(item.id)}">校验</button><button type="button" data-kind="tamper" data-id="${esc(item.id)}">校验篡改</button></p>`
+      : "";
+    return `<article class="ticket">
+      <p><span class="badge">${esc(item.status === "valid" ? "可校验" : "证据缺失")}</span> ${esc(item.caseKey)}</p>
+      <p class="mono">${esc(item.digest || item.errorCode)} · ${esc(item.id)}</p>
+      ${actions}
+    </article>`;
+  }).join("") : `<p class="muted">还没有证据包</p>`;
+  document.getElementById("packages").querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const body = button.dataset.kind === "tamper" ? { manifest: "tampered\n" } : {};
+      fetch("/api/evidence/" + button.dataset.id + "/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      }).then((response) => response.json()).then((result) => {
+        button.insertAdjacentText("afterend", result.valid ? " 校验通过" : " 校验失败");
+      }).catch((error) => {
+        button.insertAdjacentText("afterend", error.message);
+      });
+    });
+  });
+  const hardCases = overview.hardCases || [];
+  document.getElementById("hard-cases").innerHTML = hardCases.length ? hardCases.map((item) => {
+    const actions = item.status === "open"
+      ? `<p><button type="button" data-kind="label" data-id="${esc(item.id)}">标为真负例</button></p>`
+      : `<p><button type="button" data-kind="export">导出难例</button></p>`;
+    const label = item.label ? ` · ${item.label}` : "";
+    return `<article class="ticket">
+      <p><span class="badge">${esc(item.status === "labeled" ? "已标注" : "待标注")}</span> ${esc(reasonLabel[item.reason] || item.reason)}${esc(label)}</p>
+      <p class="mono">${esc(item.caseKey)} · ${esc(item.id)}</p>
+      ${actions}
+    </article>`;
+  }).join("") : `<p class="muted">还没有难例</p>`;
+  document.getElementById("hard-cases").querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (button.dataset.kind === "export") {
+        fetch("/api/hard-cases/export").then((response) => response.json()).then((rows) => {
+          button.insertAdjacentText("afterend", " 导出 " + rows.length + " 条");
+        });
+        return;
+      }
+      fetch("/api/hard-cases/" + button.dataset.id + "/label", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: "true_negative", actor: "investigator" })
+      }).then((response) => {
+        if (!response.ok) {
+          throw new Error("标注没有写入");
+        }
+        window.location.reload();
+      }).catch((error) => {
+        button.insertAdjacentText("afterend", error.message);
+      });
+    });
+  });
+  const compares = overview.compares || [];
+  document.getElementById("compares").innerHTML = compares.length ? compares.map((item) => `
+    <article class="ticket">
+      <p><span class="badge">${item.trained ? "已训练" : "未训练"}</span> ${esc(item.leftName)} ${esc(item.leftScore)} · ${esc(item.rightName)} ${esc(item.rightScore)}</p>
+      <p class="mono">优胜 ${esc(item.winner)} · ${esc(item.caseKey)}</p>
+    </article>
+  `).join("") : "";
 }
 
 function renderProfiles(overview) {

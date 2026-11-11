@@ -1,8 +1,10 @@
 package com.tracewitness.platform.agent;
 
-import com.tracewitness.platform.store.PlatformStore;
+import com.tracewitness.platform.media.MediaService;
 import com.tracewitness.platform.profile.ProfileService;
 import com.tracewitness.platform.safety.ReverseRules;
+import com.tracewitness.platform.trajectory.TrajectoryService;
+import com.tracewitness.platform.store.PlatformStore;
 import com.tracewitness.platform.store.TrackStore;
 import org.springframework.stereotype.Service;
 
@@ -19,12 +21,17 @@ public class InvestigationTools {
 
     private final PlatformStore store;
     private final TrackStore tracks;
+    private final MediaService media;
     private final ProfileService profiles;
+    private final TrajectoryService trajectories;
 
-    public InvestigationTools(PlatformStore store, TrackStore tracks, ProfileService profiles) {
+    public InvestigationTools(PlatformStore store, TrackStore tracks, MediaService media, ProfileService profiles,
+                              TrajectoryService trajectories) {
         this.store = store;
         this.tracks = tracks;
+        this.media = media;
         this.profiles = profiles;
+        this.trajectories = trajectories;
     }
 
     public Map<String, Object> execute(String runId, String toolName, Map<String, Object> arguments) {
@@ -39,16 +46,14 @@ public class InvestigationTools {
             return searchPerson(runId, args);
         }
         if ("build_trajectory".equals(toolName)) {
-            return trajectory(runId);
+            return trajectory(runId, args);
         }
         if ("find_companions".equals(toolName)) {
-            Map<String, Object> result = base("find_companions");
-            result.put("companions", Collections.emptyList());
-            result.put("source_ids", Collections.emptyList());
-            return result;
+            String profileId = args.get("profile_id") == null ? "" : String.valueOf(args.get("profile_id"));
+            return trajectories.toolCompanions(runId, profileId);
         }
         if ("export_evidence".equals(toolName)) {
-            return failed(toolName, "evidence_export_pending");
+            return exportEvidence(runId, args);
         }
         return failed(toolName, "unknown_tool");
     }
@@ -104,7 +109,11 @@ public class InvestigationTools {
         return result;
     }
 
-    private Map<String, Object> trajectory(String runId) {
+    private Map<String, Object> trajectory(String runId, Map<String, Object> args) {
+        Object profileId = args.get("profile_id");
+        if (profileId != null && !String.valueOf(profileId).trim().isEmpty()) {
+            return trajectories.toolTrajectory(runId, String.valueOf(profileId));
+        }
         Map<String, Object> result = base("build_trajectory");
         List<Map<String, Object>> compact = new ArrayList<Map<String, Object>>();
         List<String> sourceIds = new ArrayList<String>();
@@ -122,6 +131,32 @@ public class InvestigationTools {
         return result;
     }
 
+    private Map<String, Object> exportEvidence(String runId, Map<String, Object> args) {
+        List<String> exported = new ArrayList<String>();
+        boolean missing = false;
+        for (String sourceId : stringList(args.get("source_ids"))) {
+            Map<String, Object> event = store.findEvent(sourceId);
+            String clipId = event != null && runId.equals(event.get("runId")) ? media.existingClipId(runId, sourceId) : null;
+            Map<String, Object> decision = ReverseRules.evaluate("missing_evidence",
+                    Collections.<String, Object>singletonMap("path_exists", clipId != null));
+            if ("evidence_missing".equals(decision.get("error"))) {
+                missing = true;
+                continue;
+            }
+            exported.add(clipId);
+        }
+        Map<String, Object> result = base("export_evidence");
+        result.put("source_ids", exported);
+        if (missing || exported.isEmpty()) {
+            result.put("error", "evidence_missing");
+            return result;
+        }
+        Map<String, Object> packed = trajectories.sealClips(runId, exported);
+        result.put("package_id", packed.get("id"));
+        result.put("digest", packed.get("digest"));
+        return result;
+    }
+
     private static Map<String, Object> base(String toolName) {
         Map<String, Object> result = new LinkedHashMap<String, Object>();
         result.put("tool_name", toolName);
@@ -131,7 +166,20 @@ public class InvestigationTools {
     private static Map<String, Object> failed(String toolName, String error) {
         Map<String, Object> result = base(toolName);
         result.put("error", error);
-        result.put("source_ids", Collections.emptyList());
+        result.put("source_ids", Collections.<String>emptyList());
         return result;
+    }
+
+    private static List<String> stringList(Object value) {
+        List<String> ids = new ArrayList<String>();
+        if (!(value instanceof List)) {
+            return ids;
+        }
+        for (Object item : (List<?>) value) {
+            if (item != null) {
+                ids.add(String.valueOf(item));
+            }
+        }
+        return ids;
     }
 }

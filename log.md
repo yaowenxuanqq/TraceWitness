@@ -1,0 +1,91 @@
+## 2026-11-11 15:30 - 第 10 周轨迹、证据与难例
+- 修改人：AI助手
+- 影响文件：
+  - platform/src/main/java/com/tracewitness/platform/trajectory/TrajectoryPolicy.java （新增）
+  - platform/src/main/java/com/tracewitness/platform/trajectory/TrajectoryService.java （新增）
+  - platform/src/main/java/com/tracewitness/platform/store/TrajectoryStore.java （新增）
+  - platform/src/main/resources/db/migration/V8__trajectory.sql （新增）
+  - platform/src/main/java/com/tracewitness/platform/agent/InvestigationTools.java （修改）
+  - platform/src/main/java/com/tracewitness/platform/api/ApiController.java （修改）
+  - web/index.html （修改）
+  - web/app.js （修改）
+  - web/styles.css （修改）
+  - eval/positive/w10.json （新增）
+  - docs/architecture.md （修改）
+  - docs/api.md （修改）
+  - README.md （修改）
+  - contracts/README.md （修改）
+  - log.md （修改）
+- 变更概要：
+  - 门点轨迹剔除不可达点和旅行时间不足的点，同一扇门的中间点从地图折线抽掉
+  - 证据包用清单 SHA-256 校验，缺文件不写哈希；难例标注后才能导出，候选模型只对比分数
+- 关联需求：w10
+
+## 2026-11-11 14:30 - 第 9 周检索与非机动车
+- 修改人：AI助手
+- 影响文件：
+  - platform/src/main/java/com/tracewitness/platform/retrieval/RetrievalPolicy.java （新增）
+  - platform/src/main/java/com/tracewitness/platform/retrieval/PassagePolicy.java （新增）
+  - platform/src/main/java/com/tracewitness/platform/retrieval/RetrievalService.java （新增）
+  - platform/src/main/java/com/tracewitness/platform/store/RetrievalStore.java （新增）
+  - platform/src/main/resources/db/migration/V7__retrieval.sql （新增）
+  - platform/src/main/java/com/tracewitness/platform/api/ApiController.java （修改）
+  - web/index.html （修改）
+  - web/app.js （修改）
+  - eval/positive/w09.json （新增）
+  - eval/reverse/w09.json （新增）
+  - docs/architecture.md （修改）
+  - docs/api.md （新增）
+  - README.md （修改）
+  - contracts/README.md （修改）
+  - log.md （修改）
+- 变更概要：
+  - 多图检索先做属性硬过滤，再按人脸最大相似度和人体质量加权融合，软加权放在排序前并写出解释
+  - 非机动车只有入口连续进楼才告警，出楼不告警，开门动作保持未执行
+- 关联需求：w09
+
+## 2026-11-11 11:50 - 第 8 周人员档案与门点拓扑
+- 修改人：AI助手
+- 影响文件：
+  - platform/src/main/java/com/tracewitness/platform/profile/ProfileService.java （新增）
+  - platform/src/main/java/com/tracewitness/platform/profile/ProfilePolicy.java （新增）
+  - platform/src/main/java/com/tracewitness/platform/profile/DoorGraph.java （新增）
+  - platform/src/main/java/com/tracewitness/platform/store/ProfileStore.java （新增）
+  - platform/src/main/resources/db/migration/V6__profile.sql （新增）
+  - platform/src/main/java/com/tracewitness/platform/agent/InvestigationTools.java （修改）
+  - platform/src/main/java/com/tracewitness/platform/api/ApiController.java （修改）
+  - web/index.html （修改）
+  - web/app.js （修改）
+  - eval/positive/w08.json （新增）
+  - eval/reverse/w08.json （新增）
+  - docs/architecture.md （修改）
+  - README.md （修改）
+  - contracts/README.md （修改）
+  - log.md （修改）
+- 变更概要：
+  - 模拟门禁按最短路和旅行时间决定能否并入档案，不可达或超时禁止合并
+  - 双库分数过近进入待审批，批准或驳回都写入审计
+  - 检索只查已有档案，不因空结果新建人员
+- 关联需求：w08
+
+## 2026-11-11 10:40 - 第 7 周 Agent 主链路
+- 修改人：AI助手
+- 影响文件：
+  - platform/src/main/java/com/tracewitness/platform/agent/AgentService.java （修改）
+  - platform/src/main/java/com/tracewitness/platform/agent/InvestigationTools.java （新增）
+  - platform/src/main/java/com/tracewitness/platform/agent/PythonAgentClient.java （修改）
+  - platform/src/main/java/com/tracewitness/platform/agent/AgentModels.java （修改）
+  - ai-service/app/adapters.py （修改）
+  - ai-service/app/main.py （修改）
+  - eval/positive/w07.json （新增）
+  - web/app.js （修改）
+  - docs/architecture.md （修改）
+  - README.md （修改）
+  - contracts/README.md （修改）
+  - contracts/tools/*.schema.json （修改）
+  - log.md （新增）
+- 变更概要：
+  - 六个 P0 工具由 Java 执行，引用非法重试一次，再失败则证据不足
+  - 已配置的 OpenAI 兼容接口会真实发 chat completions；未配置时仍走 MOCK_MODE
+  - 增加 10 条正向场景
+- 关联需求：w07
