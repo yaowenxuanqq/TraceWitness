@@ -24,6 +24,8 @@
 
 `run_mock.bat` 和 `run_eval.bat` 会寻找 Java 8。本机 `JAVA_HOME` 如果指向 Java 21，脚本改用 `JAVA_HOME_8`，或 `C:\Program Files\Eclipse Adoptium\jdk-8*`。找不到 Java 8 就停止，不用 PATH 上碰巧出现的 `java`。Gradle Wrapper 使用 7.6.4 的华为云镜像，因为 `services.gradle.org` 在这台机器上连接超时。依赖仓库同样先走阿里云，再回退 Maven Central。
 
+直接运行 `platform\gradlew.bat` 时，`JAVA_HOME` 也必须指向 Java 8 到 Java 19。Gradle 7.6.4 不支持 Java 20/21；当前构建会在配置阶段给出明确错误，不再进入“测试类全部 ClassNotFoundException”的误导路径。
+
 ## 端口
 
 | 进程 | 端口 |

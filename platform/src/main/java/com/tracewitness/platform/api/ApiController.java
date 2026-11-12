@@ -146,7 +146,7 @@ public class ApiController {
     @GetMapping("/events/{id}")
     public ResponseEntity<Map<String, Object>> event(@PathVariable String id) {
         Map<String, Object> event = store.findEvent(id);
-        if (event == null) {
+        if (event == null || !scenarios.runId().equals(event.get("runId"))) {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(event);
@@ -160,7 +160,7 @@ public class ApiController {
     @GetMapping("/agent/runs/{id}")
     public ResponseEntity<Map<String, Object>> agentRun(@PathVariable String id) {
         Map<String, Object> run = store.findAgentRunById(id);
-        if (run == null) {
+        if (run == null || !scenarios.runId().equals(run.get("runId"))) {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(run);
@@ -168,7 +168,8 @@ public class ApiController {
 
     @GetMapping("/agent/runs/{id}/tool-calls")
     public ResponseEntity<List<Map<String, Object>>> toolCalls(@PathVariable String id) {
-        if (store.findAgentRunById(id) == null) {
+        Map<String, Object> run = store.findAgentRunById(id);
+        if (run == null || !scenarios.runId().equals(run.get("runId"))) {
             return ResponseEntity.notFound().build();
         }
         return ResponseEntity.ok(store.listToolCalls(id));

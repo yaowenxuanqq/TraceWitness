@@ -21,6 +21,14 @@
 | GET | `/api/agent/runs/{id}/tool-calls` | 该次运行的工具调用 |
 | GET | `/api/media` | 音频、片段和上传 |
 
+## 媒体上传
+
+| 方法 | 路径 | 作用 |
+| --- | --- | --- |
+| POST | `/api/media/uploads` | 上传本机测试音视频。表单字段名是 `file` |
+
+服务端只接受常见的 `audio/*` 和 `video/*` 容器。声明的 MIME 类型、文件名扩展名和文件头必须一致。`text/html`、`image/svg+xml`、可执行文件和无法识别的文件头返回 400。所有响应带 `X-Content-Type-Options: nosniff`，并带同源内容安全策略，避免上传文件被当作同源页面执行。
+
 ## 档案
 
 | 方法 | 路径 | 作用 |

@@ -216,6 +216,12 @@ def require_clock(body: dict) -> None:
     missing = [field for field in CLOCK_FIELDS if body.get(field) is None]
     if missing:
         raise ValueError("missing clock fields: " + ", ".join(missing))
+    if not isinstance(body["run_id"], str) or not body["run_id"].strip():
+        raise ValueError("run_id must be a non-empty string")
+    if not isinstance(body["request_timestamp"], str) or not body["request_timestamp"].strip():
+        raise ValueError("request_timestamp must be a non-empty string")
+    if isinstance(body["tick"], bool) or not isinstance(body["tick"], int) or body["tick"] < 0:
+        raise ValueError("tick must be a non-negative integer")
     if body["clock_mode"] not in ("EVAL", "REAL"):
         raise ValueError("clock_mode must be EVAL or REAL")
 

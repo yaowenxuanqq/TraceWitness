@@ -4,6 +4,13 @@ plugins {
     id 'java'
 }
 
+def javaMajor = JavaVersion.current().majorVersion.toInteger()
+if (javaMajor > 19) {
+    throw new GradleException(
+            "TraceWitness uses Gradle 7.6.4, which supports Java 8-19. Current Java is ${JavaVersion.current()}. " +
+            "Set JAVA_HOME to JDK 8, or run run_eval.bat / run_mock.bat from the repository root.")
+}
+
 group = 'com.tracewitness'
 version = '0.4.0'
 

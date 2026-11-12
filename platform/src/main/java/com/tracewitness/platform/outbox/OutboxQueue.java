@@ -11,11 +11,11 @@ import java.util.List;
 public class OutboxQueue {
     private final Deque<Long> ids = new ArrayDeque<>();
 
-    public void addAll(List<Long> values) {
+    public synchronized void addAll(List<Long> values) {
         ids.addAll(values);
     }
 
-    public List<Long> drain() {
+    public synchronized List<Long> drain() {
         List<Long> copy = new ArrayList<>(ids);
         ids.clear();
         return copy;

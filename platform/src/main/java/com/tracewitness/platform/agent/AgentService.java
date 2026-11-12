@@ -8,6 +8,8 @@ import com.tracewitness.platform.store.PlatformStore;
 import com.tracewitness.platform.store.PlatformStore.RunManifest;
 import com.tracewitness.platform.time.ClockMode;
 import com.tracewitness.platform.time.TimeSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -22,6 +24,7 @@ import java.util.Set;
 
 @Service
 public class AgentService {
+    private static final Logger LOG = LoggerFactory.getLogger(AgentService.class);
     private static final int MAX_ROUNDS = 4;
 
     private final PlatformStore store;
@@ -98,6 +101,7 @@ public class AgentService {
             }
             persist(runId, task, now, selected, results, report, invalid, retried);
         } catch (RuntimeException exception) {
+            LOG.warn("agent investigation failed for run {}", runId, exception);
             transactions.executeWithoutResult(status -> saveFailure(runId, task, now, "model_failed", "模型调用失败"));
         }
     }

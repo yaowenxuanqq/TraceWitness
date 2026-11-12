@@ -62,13 +62,10 @@ public class MediaService {
 
     @Transactional
     public Map<String, Object> storeUpload(String filename, String contentType, byte[] bytes) throws IOException {
-        if (bytes == null || bytes.length == 0) {
-            throw new IllegalArgumentException("empty upload");
-        }
+        String type = MediaTypes.validate(filename, contentType, bytes);
         String runId = scenarios.runId();
         String id = platformStore.nextId(runId, "media");
-        String type = contentType == null || contentType.trim().isEmpty() ? "application/octet-stream" : contentType.split(";")[0].trim();
-        String relative = runId + "/uploads/" + id + "/file" + extension(filename);
+        String relative = runId + "/uploads/" + id + "/file." + MediaTypes.extension(filename);
         Path file = resolve(relative);
         Files.createDirectories(file.getParent());
         Files.write(file, bytes);
@@ -314,20 +311,4 @@ public class MediaService {
         return root;
     }
 
-    private static String extension(String filename) {
-        if (filename == null) {
-            return "";
-        }
-        int slash = Math.max(filename.lastIndexOf('/'), filename.lastIndexOf('\\'));
-        String base = slash >= 0 ? filename.substring(slash + 1) : filename;
-        int dot = base.lastIndexOf('.');
-        if (dot < 0 || dot == base.length() - 1) {
-            return "";
-        }
-        String raw = base.substring(dot + 1).toLowerCase();
-        if (!raw.matches("[a-z0-9]{1,8}")) {
-            return "";
-        }
-        return "." + raw;
-    }
 }

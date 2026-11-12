@@ -60,7 +60,12 @@ public class PluginStore {
         return jdbc.query("select id, run_id, name, version, arch, abi, resource_mb, payload_hash, signature, payload, "
                         + "slot, reason, health, loaded, hash_checked, check_order from plugin_manifest "
                         + "where run_id = ? order by id",
-                (rs, rowNum) -> manifestRow(rs), runId);
+                (rs, rowNum) -> {
+                    Map<String, Object> row = manifestRow(rs);
+                    row.remove("signature");
+                    row.remove("payload");
+                    return row;
+                }, runId);
     }
 
     public Map<String, Object> findManifest(String id) {

@@ -6,6 +6,7 @@ The ONNX graph is a synthetic luminance detector, not a trained weight file.
 
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
+import threading
 import time
 
 import numpy as np
@@ -18,6 +19,7 @@ SAMPLE_FRAMES = 8
 THRESHOLD = 0.75
 
 _session = None
+_session_lock = threading.Lock()
 
 
 class InferenceError(Exception):
@@ -27,7 +29,9 @@ class InferenceError(Exception):
 def get_session():
     global _session
     if _session is None:
-        _session = ort.InferenceSession(str(MODEL_PATH), providers=["CPUExecutionProvider"])
+        with _session_lock:
+            if _session is None:
+                _session = ort.InferenceSession(str(MODEL_PATH), providers=["CPUExecutionProvider"])
     return _session
 
 

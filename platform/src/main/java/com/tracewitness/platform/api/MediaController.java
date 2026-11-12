@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 
 @RestController
@@ -54,6 +55,10 @@ public class MediaController {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
-        return ResponseEntity.ok(media.storeUpload(file.getOriginalFilename(), file.getContentType(), file.getBytes()));
+        try {
+            return ResponseEntity.ok(media.storeUpload(file.getOriginalFilename(), file.getContentType(), file.getBytes()));
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(Collections.<String, Object>singletonMap("error", exception.getMessage()));
+        }
     }
 }

@@ -6,6 +6,7 @@
 
 - Windows
 - Java 8。脚本不使用指向 Java 21 的 `JAVA_HOME`。可以设置 `JAVA_HOME_8`
+- 直接调用 `platform\gradlew.bat` 时，`JAVA_HOME` 需要是 Java 8 到 Java 19；Java 20/21 会在配置阶段明确失败
 - Python 3.13。第一次执行 `run_mock.bat` 时，如果 `ai-service\.venv` 不存在，脚本会创建它并安装 `ai-service\requirements.txt`
 - `run_eval.bat` 也会自动创建同一虚拟环境，干净 clone 可直接跑评测
 - 端口 8080 和 8000 空闲
@@ -21,6 +22,7 @@
 | `run_mock.bat` | 启动 Python `:8000` 和 Java `:8080`，打开 mock 闭环 |
 | `run_eval.bat` | 跑平台测试、Python 测试和检测计时，并写出 `docs/eval-report.md` |
 | `run_demo.bat` | 不启动服务，也不调用模型 |
+| `scripts/http-audit.ps1` | 双服务启动后执行 22 项 HTTP 检查；失败退出码非 0 |
 
 浏览器打开 `http://127.0.0.1:8080/`。Java 只监听 `127.0.0.1`，局域网地址访问不到。
 
