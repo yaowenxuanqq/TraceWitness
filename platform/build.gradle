@@ -2,6 +2,8 @@ plugins {
     id 'org.springframework.boot' version '2.7.18'
     id 'io.spring.dependency-management' version '1.0.15.RELEASE'
     id 'java'
+    id 'jacoco'
+    id 'org.cyclonedx.bom' version '1.10.0'
 }
 
 def javaMajor = JavaVersion.current().majorVersion.toInteger()
@@ -17,6 +19,15 @@ version = '0.4.0'
 sourceCompatibility = '1.8'
 targetCompatibility = '1.8'
 
+ext['tomcat.version'] = '9.0.123'
+ext['spring-framework.version'] = '5.3.39'
+ext['jackson-bom.version'] = '2.23.0'
+ext['snakeyaml.version'] = '2.7'
+ext['logback.version'] = '1.2.13'
+ext['log4j2.version'] = '2.26.1'
+ext['flyway.version'] = '9.22.3'
+ext['h2.version'] = '2.2.220'
+
 repositories {
     maven { url = 'https://maven.aliyun.com/repository/public' }
     mavenCentral()
@@ -28,16 +39,60 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     runtimeOnly 'com.h2database:h2'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'io.swagger.parser.v3:swagger-parser:2.1.48'
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
+    options.compilerArgs += ['-Xlint:unchecked', '-Xlint:deprecation', '-Werror']
 }
 
 tasks.named('test') {
     useJUnitPlatform()
     systemProperty 'file.encoding', 'UTF-8'
     systemProperty 'java.awt.headless', 'true'
+}
+
+cyclonedxBom {
+    includeConfigs = ['runtimeClasspath']
+    outputFormat = 'json'
+    outputName = 'tracewitness-platform-sbom'
+    destination = file("$buildDir/reports/sbom")
+}
+
+jacoco {
+    toolVersion = '0.8.12'
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+jacocoTestCoverageVerification {
+    dependsOn jacocoTestReport
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.60
+            }
+        }
+    }
+}
+
+check.dependsOn jacocoTestCoverageVerification
+
+tasks.register('runtimeDependencies') {
+    doLast {
+        configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts.each {
+            println "${it.moduleVersion.id.group}:${it.moduleVersion.id.name}:${it.moduleVersion.id.version}"
+        }
+    }
 }
 
 bootRun {

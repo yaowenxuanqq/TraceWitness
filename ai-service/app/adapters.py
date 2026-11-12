@@ -6,8 +6,9 @@ posts to the configured OpenAI-compatible chat endpoint. Business time stays wit
 
 import json
 from pathlib import Path
-from typing import Optional, Protocol
+from typing import Protocol
 from urllib import error, request
+from urllib.parse import urlparse
 
 from jsonschema import Draft202012Validator
 
@@ -74,7 +75,9 @@ class ModelAdapter(Protocol):
 
 
 class MockAdapter:
-    def select_tool(self, task: str, tools: list[str], tool_results: Optional[list] = None, model_seed: int = 20261110) -> dict:
+    def select_tool(
+        self, task: str, tools: list[str], tool_results: list | None = None, model_seed: int = 20261110
+    ) -> dict:
         done = {item.get("tool_name") for item in (tool_results or [])}
         ids = _source_ids(tool_results or [])
         calls: list[dict] = []
@@ -105,7 +108,9 @@ class MockAdapter:
                 add("get_event_detail", {"event_id": ids[0]})
         return {"tool_calls": calls}
 
-    def draft_report(self, task: str, tool_results: list[dict], citation_hint: str = "", model_seed: int = 20261110) -> dict:
+    def draft_report(
+        self, task: str, tool_results: list[dict], citation_hint: str = "", model_seed: int = 20261110
+    ) -> dict:
         source_ids = _source_ids(tool_results)
         if not source_ids:
             return _insufficient()
@@ -132,7 +137,9 @@ class OpenAICompatibleAdapter:
         self.api_key = api_key or ""
         self.model = model or ""
 
-    def select_tool(self, task: str, tools: list[str], tool_results: Optional[list] = None, model_seed: int = 20261110) -> dict:
+    def select_tool(
+        self, task: str, tools: list[str], tool_results: list | None = None, model_seed: int = 20261110
+    ) -> dict:
         self._configured()
         allowed = [name for name in tools if name in TOOL_PARAMETERS]
         payload = {
@@ -142,7 +149,10 @@ class OpenAICompatibleAdapter:
             "messages": [
                 {
                     "role": "system",
-                    "content": "只从给定工具里选择下一步。已经执行过的工具不要重复。没有更多工具可调用时，返回空的 tool_calls。不要编造证据 ID。",
+                    "content": (
+                        "只从给定工具里选择下一步。已经执行过的工具不要重复。"
+                        "没有更多工具可调用时，返回空的 tool_calls。不要编造证据 ID。"
+                    ),
                 },
                 {
                     "role": "user",
@@ -155,7 +165,9 @@ class OpenAICompatibleAdapter:
         message = self._message(payload)
         return {"tool_calls": _parse_tool_calls(message, allowed)}
 
-    def draft_report(self, task: str, tool_results: list[dict], citation_hint: str = "", model_seed: int = 20261110) -> dict:
+    def draft_report(
+        self, task: str, tool_results: list[dict], citation_hint: str = "", model_seed: int = 20261110
+    ) -> dict:
         self._configured()
         payload = {
             "model": self.model,
@@ -186,6 +198,8 @@ class OpenAICompatibleAdapter:
     def _configured(self) -> None:
         if not self.base_url or not self.api_key or not self.model:
             raise ModelNotConfigured("模型 API 未配置")
+        if urlparse(self.base_url).scheme not in ("http", "https"):
+            raise ModelNotConfigured("模型 API 地址只允许 http 或 https")
 
     def _message(self, payload: dict) -> dict:
         url = self.base_url + "/chat/completions"
@@ -199,7 +213,8 @@ class OpenAICompatibleAdapter:
             method="POST",
         )
         try:
-            with request.urlopen(req, timeout=30) as response:
+            # _configured() restricts the URL to http or https.
+            with request.urlopen(req, timeout=30) as response:  # nosec B310
                 data = json.loads(response.read().decode("utf-8"))
         except error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")

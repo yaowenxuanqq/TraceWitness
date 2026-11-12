@@ -809,3 +809,94 @@ $env:JAVA_HOME='C:\Users\rghf5\apps\jdk-21.0.2'
 TraceWitness 作为纯软件仿真原型，代码结构、确定性策略、证据引用、Mock 工具链、测试和仓库卫生达到可展示水平。本次审计修复了上传注入、响应头、请求体严格性和 Java 21 构建误导等明确问题，并补了对应测试。
 
 当前不能对外声明“真实 LLM Agent 已验收”或“12 个阶段全部完成”。真实模型配置缺失属于正式验收 P0；在完成真实模型 smoke test 和 30 条固定任务前，所有 Agent 指标必须继续写“未测”。
+
+---
+
+## 17. 2026-11-12 质量门禁复审计
+
+**复审计基线：** `fae3054`
+**边界：** 用户明确把真实模型接入留到最后；本轮没有配置或调用真实模型，没有修改 `w01`-`w12` 标签。
+
+### 17.1 实测结果
+
+| 检查 | 结果 | 证据 |
+| --- | --- | --- |
+| Java | 39/39 通过 | `scripts\quality-gate.ps1`、`platform\build\test-results` |
+| Java 行覆盖率 | 90.43% | JaCoCo XML/HTML，门限 60% |
+| Python | 23/23 通过 | pytest 退出码 0 |
+| Python 覆盖率 | 80.58% | `coverage-python.xml`，门限 70% |
+| Python 静态安全 | Ruff、Bandit 通过 | `ruff check app tests`、`bandit -r app -q -ll` |
+| Python 依赖 | 0 条已知漏洞 | pip-audit |
+| Java 运行时依赖 | 40 个坐标已扫描；35 条已核对公告 | OSV querybatch，基线见 `security\osv-baseline.txt` |
+| SBOM | Java、Python 均生成 | CycloneDX JSON |
+| HTTP | 44/44 通过 | `scripts\http-audit.ps1` |
+| 浏览器 | 交互、console error、axe、390px 通过 | `scripts\browser-audit.ps1` |
+| 一键评测 | 退出码 0 | `run_eval.bat`；Java 39、Python 23、检测和四路基准通过 |
+| H2/Flyway 兼容警告 | 0 条 | H2 `2.2.220` + Flyway `9.22.3` |
+
+### 17.2 本轮修复
+
+#### P1-05 OpenAPI 契约无效（已修复）
+
+**证据：** 原 `contracts/http-api.yaml` 只有部分写接口，所有 operation 缺 `responses`，多个 `{id}` 未声明路径参数，只有首个写接口声明 token；旧测试只做字符串包含。
+**影响：** 前端、审计脚本和文档可能出现接口漂移，结构错误无法在 CI 阻断。
+**根因：** 契约从局部说明演化，没有解析器级测试。
+**修复：** 覆盖 24 条实际路由，补 response、path parameter、`TraceToken` security scheme 和 multipart schema；`HttpContractFileTest` 改用 Swagger Parser 校验。
+**验证：** `.\platform\gradlew.bat test --tests com.tracewitness.platform.HttpContractFileTest`。
+**优先级：** P1，已完成。
+
+#### P1-06 HTTP 安全检查覆盖倒退（已修复）
+
+**证据：** `fae3054` 的脚本覆盖写接口，但缺 CSP、安全头、静态资源、HTML/WAV 上传、Python 字段边界和工具选择。
+**影响：** 重构后关键安全回归会静默离开门禁。
+**根因：** 写接口加固与旧只读审计脚本分开演进。
+**修复：** 合并为 44 项统一脚本，脚本自行启动临时服务、临时 H2 和临时媒体目录，结束后清理进程与临时文件。
+**验证：** `powershell -File .\scripts\http-audit.ps1`，结果 `TOTAL pass=44 fail=0`。
+**优先级：** P1，已完成。
+
+#### P1-07 依赖基线落后（部分修复，仍为 P1）
+
+**证据：** Spring Boot `2.7.18` 已停止常规维护。Java 8 分支仍有 35 条 OSV 公告，集中在 Spring Framework `5.3.39` 和 Logback `1.2.13`。
+**影响：** 部分公告属于 Spring MVC 静态资源、路径处理和 multipart 代码路径；本机回环绑定降低暴露面，但不能据此声明“无漏洞”。
+**根因：** Java 8 + Spring Boot 2.7 兼容分支已到生命周期末端；Boot 3 需要 Java 17 和 `javax` 到 `jakarta` 迁移。
+**本轮修复：** Tomcat `9.0.123`、Jackson `2.23.0`、SnakeYAML `2.7`、Logback `1.2.13`、Log4j API `2.26.1`、Flyway `9.22.3`、H2 `2.2.220`；Python 依赖升级到无已知漏洞版本。
+**剩余方案：** 单独迁移到 Java 17 + Spring Boot 3，切换 Jakarta API，逐周重跑 W01-W12、HTTP、浏览器和一键评测；在此之前保留 OSV 基线和 P1 风险声明。
+**验证：** `powershell -File .\scripts\java-osv-audit.ps1` 只允许基线内公告，新公告失败；`pip-audit -r ai-service\requirements.txt` 为 0。
+**优先级：** P1，未完全关闭。
+
+#### P2-09 质量门禁缺失（已修复）
+
+**证据：** 原仓库没有 CI、覆盖率、静态分析、SBOM 或可复跑浏览器门禁。
+**影响：** 修复质量和依赖风险依赖人工记忆。
+**根因：** 交付脚本只跑测试，没有工程门禁层。
+**修复：** 新增 `scripts\quality-gate.ps1`、`scripts\browser-audit.ps1`、`.github\workflows\quality.yml`、JaCoCo/SBOM 配置、Python dev 依赖和 Ruff/Bandit/pip-audit。
+**验证：** 本地完整门禁通过；CI 在 Windows、Java 8、Python 3.13 上执行同一命令。
+**优先级：** P2，已完成。
+
+#### P2-10 许可证选择缺失（仍未关闭）
+
+**证据：** 仓库没有 `LICENSE`；README 当前写“No open-source license has been selected”。
+**影响：** 公开复用和第三方分发边界不明确。
+**根因：** 这是项目所有者的法律选择，不能由代码审计擅自决定。
+**方案：** 所有者选择专有许可或开源许可证后加入 `LICENSE`，再补第三方许可证清单。
+**优先级：** P2，需所有者决定。
+
+#### P3-04 文档、错误信息、泛型警告与 axe（已修复）
+
+**证据：** 架构文档仍写模型适配器不发请求；部署文档仍要求先启动双服务；`include-message` 为 `always`；TrajectoryService 有 unchecked varargs；axe 对 SVG 文本给出 incomplete。
+**影响：** 文档误导、错误响应泄露内部消息、编译警告和可访问性人工检查残留。
+**修复：** 文档同步；错误 message/stacktrace 改为 `never`；移除泛型 varargs；轨迹 SVG 增加确定背景、文字色和 aria 隐藏重复文本；编译开启 `-Xlint:unchecked -Xlint:deprecation -Werror`。
+**验证：** 浏览器门禁 axe violations 0；Java 全量构建 0 警告；文档命令与实际脚本一致。
+**优先级：** P3，已完成。
+
+### 17.3 P0 真实模型验收仍未完成
+
+**证据：** 当前未设置 `TRACEWITNESS_MODEL_BASE_URL`、`TRACEWITNESS_MODEL_API_KEY`、`TRACEWITNESS_MODEL_NAME`；`run_demo.bat` 仍明确退出 2。
+**影响：** 真实 Qwen/其他供应商的任务完成率、工具选择准确率、引用合法率和延迟均未验证。
+**根因：** 用户明确要求把模型接入留到最后；本轮只验证 Mock、本地 fake provider 和 OpenAI-compatible 请求形状。
+**方案：** 最后阶段配置真实 API，运行 smoke test、固定任务集和失败分类；缺配置时继续保留 P0，不伪造结果。
+**优先级：** P0，用户主动延期，当前仍未关闭。
+
+### 17.4 最终判断
+
+本轮把接口契约、HTTP 回归、覆盖率、静态分析、依赖审计、SBOM、浏览器回归和文档门禁补齐。纯软件仿真链路可以复跑，Python 依赖当前无已知漏洞；Java 8/Spring Boot 2.7 分支仍有 35 条已核对公告，必须通过 Java 17 + Spring Boot 3 迁移才能实质关闭。真实模型能力仍未验收，不得写成已验证。

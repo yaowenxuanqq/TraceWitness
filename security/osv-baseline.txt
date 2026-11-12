@@ -1,0 +1,37 @@
+# Reviewed advisories on the Java 8 / Spring Boot 2.7 compatibility branch.
+# Remove an entry when its dependency is upgraded or the finding is disproved.
+ch.qos.logback:logback-core:1.2.13 GHSA-25qh-j22f-pwp8
+ch.qos.logback:logback-core:1.2.13 GHSA-6v67-2wr5-gvf4
+ch.qos.logback:logback-core:1.2.13 GHSA-jhq6-gfmj-v8fx
+ch.qos.logback:logback-core:1.2.13 GHSA-p47f-322f-whfh
+ch.qos.logback:logback-core:1.2.13 GHSA-pr98-23f8-jwxv
+ch.qos.logback:logback-core:1.2.13 GHSA-qqpg-mvqg-649v
+org.springframework.boot:spring-boot:2.7.18 GHSA-rc42-6c7j-7h5r
+org.springframework.boot:spring-boot:2.7.18 GHSA-wwpq-f5c3-7hvx
+org.springframework.boot:spring-boot-autoconfigure:2.7.18 GHSA-ggg2-9786-hwc8
+org.springframework:spring-context:5.3.39 GHSA-4gc7-5j7h-4qph
+org.springframework:spring-context:5.3.39 GHSA-4wp7-92pw-q264
+org.springframework:spring-core:5.3.39 GHSA-659m-px2c-25wj
+org.springframework:spring-core:5.3.39 GHSA-jmp9-x22r-554x
+org.springframework:spring-expression:5.3.39 GHSA-775g-4xr8-78h8
+org.springframework:spring-expression:5.3.39 GHSA-9f52-rjqv-25qv
+org.springframework:spring-expression:5.3.39 GHSA-r5w3-xv2f-j59q
+org.springframework:spring-expression:5.3.39 GHSA-wxpp-56q6-5pcg
+org.springframework:spring-web:5.3.39 GHSA-4gc7-5j7h-4qph
+org.springframework:spring-web:5.3.39 GHSA-4wrc-f8pq-fpqp
+org.springframework:spring-webmvc:5.3.39 GHSA-3chg-m5w7-qfv5
+org.springframework:spring-webmvc:5.3.39 GHSA-4773-3jfm-qmx3
+org.springframework:spring-webmvc:5.3.39 GHSA-6hcq-hmm3-jj3c
+org.springframework:spring-webmvc:5.3.39 GHSA-6p4f-wcwh-5vvm
+org.springframework:spring-webmvc:5.3.39 GHSA-72pg-x5f8-j25j
+org.springframework:spring-webmvc:5.3.39 GHSA-957g-f97v-vppc
+org.springframework:spring-webmvc:5.3.39 GHSA-cjpg-rgq5-fr37
+org.springframework:spring-webmvc:5.3.39 GHSA-cx7f-g6mp-7hqm
+org.springframework:spring-webmvc:5.3.39 GHSA-g5vr-rgqm-vf78
+org.springframework:spring-webmvc:5.3.39 GHSA-h3qp-gqrc-q736
+org.springframework:spring-webmvc:5.3.39 GHSA-mq64-j8f9-9gcj
+org.springframework:spring-webmvc:5.3.39 GHSA-pc63-qcmh-9cmg
+org.springframework:spring-webmvc:5.3.39 GHSA-r936-gwx5-v52f
+org.springframework:spring-webmvc:5.3.39 GHSA-w3c8-7r8f-9jp8
+org.springframework:spring-webmvc:5.3.39 GHSA-wg35-8jpf-2xv3
+org.springframework:spring-webmvc:5.3.39 GHSA-x23c-287f-qqv5

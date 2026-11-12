@@ -17,8 +17,11 @@ if errorlevel 1 goto fail
 
 if not exist "ai-service\.venv\Scripts\python.exe" (
   py -3.13 -m venv ai-service\.venv
+  if errorlevel 1 py -3 -m venv ai-service\.venv
+  if errorlevel 1 python -m venv ai-service\.venv
   if errorlevel 1 goto fail
   ai-service\.venv\Scripts\python.exe -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r ai-service\requirements.txt
+  if errorlevel 1 ai-service\.venv\Scripts\python.exe -m pip install -r ai-service\requirements.txt
   if errorlevel 1 goto fail
 )
 

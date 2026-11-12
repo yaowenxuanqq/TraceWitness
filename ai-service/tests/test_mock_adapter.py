@@ -3,7 +3,15 @@ import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
-from app.adapters import MockAdapter, OpenAICompatibleAdapter, draft_report, select_tool
+import pytest
+
+from app.adapters import (
+    MockAdapter,
+    ModelNotConfigured,
+    OpenAICompatibleAdapter,
+    draft_report,
+    select_tool,
+)
 
 CLOCK = {
     "run_id": "run-w02-mock-incident-20261110",
@@ -74,11 +82,7 @@ def test_openai_adapter_posts_chat_completion():
                     )
                 }
             else:
-                message = {
-                    "tool_calls": [
-                        {"function": {"name": "search_events", "arguments": "{\"limit\": 5}"}}
-                    ]
-                }
+                message = {"tool_calls": [{"function": {"name": "search_events", "arguments": '{"limit": 5}'}}]}
             payload = json.dumps({"choices": [{"message": message}]}, ensure_ascii=False).encode("utf-8")
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -94,7 +98,7 @@ def test_openai_adapter_posts_chat_completion():
     thread.start()
     try:
         port = server.server_address[1]
-        adapter = OpenAICompatibleAdapter("http://127.0.0.1:%d/v1" % port, "local-key", "owner-model")
+        adapter = OpenAICompatibleAdapter(f"http://127.0.0.1:{port}/v1", "local-key", "owner-model")
         selected = adapter.select_tool("调查北门刚刚发生了什么", ["search_events"], [], 20261110)
         assert selected["tool_calls"][0]["tool_name"] == "search_events"
         assert selected["tool_calls"][0]["arguments"] == {"limit": 5}
@@ -114,6 +118,12 @@ def test_openai_adapter_posts_chat_completion():
     finally:
         server.shutdown()
         thread.join(timeout=3)
+
+
+def test_openai_adapter_rejects_non_http_scheme():
+    adapter = OpenAICompatibleAdapter("file:///tmp/model", "local-key", "owner-model")
+    with pytest.raises(ModelNotConfigured, match="http"):
+        adapter.select_tool("investigate", ["search_events"], [], 20261110)
 
 
 def _execute(call):
@@ -149,10 +159,19 @@ def _run(task):
     seen = set()
     names = []
     for _ in range(4):
-        plan = adapter.select_tool(task, [
-            "search_events", "get_event_detail", "search_person",
-            "build_trajectory", "find_companions", "export_evidence",
-        ], results, 20261110)
+        plan = adapter.select_tool(
+            task,
+            [
+                "search_events",
+                "get_event_detail",
+                "search_person",
+                "build_trajectory",
+                "find_companions",
+                "export_evidence",
+            ],
+            results,
+            20261110,
+        )
         fresh = [call for call in plan["tool_calls"] if call["tool_name"] not in seen]
         if not fresh:
             break

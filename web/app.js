@@ -143,8 +143,9 @@ function renderTrails(overview) {
     return `<article class="ticket">
       <p><span class="badge">${esc(trail.caseKey)}</span> ${esc(trail.profileCode)} · 保留 ${esc(trail.keptCount)} · 剔除 ${esc(trail.droppedCount)} · 地图 ${esc(trail.thinCount)}</p>
       <svg class="trail" viewBox="0 0 100 100" role="img" aria-label="${esc(trail.caseKey)}">
+        <rect width="100" height="100" fill="#fff8e8"></rect>
         <polyline points="${line.map((point) => `${point.x},${point.y}`).join(" ")}" fill="none" stroke="#e2a84b" stroke-width="1.5"></polyline>
-        ${line.map((point) => `<circle cx="${point.x}" cy="${point.y}" r="1.8" fill="#e8f2ec"></circle><text x="${Number(point.x) + 2}" y="${point.y}">${esc(doorName[point.doorCode] || point.doorCode)}</text>`).join("")}
+        ${line.map((point) => `<circle cx="${point.x}" cy="${point.y}" r="1.8" fill="#e8f2ec"></circle><text x="${Number(point.x) + 2}" y="${point.y}" fill="#17211d" aria-hidden="true">${esc(doorName[point.doorCode] || point.doorCode)}</text>`).join("")}
       </svg>
       <p class="mono">${dropped.length ? "剔除 " + dropped.map(esc).join("；") : "没有剔除点"}</p>
     </article>`;

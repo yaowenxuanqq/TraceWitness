@@ -36,12 +36,39 @@ def test_track_break_uses_the_best_valid_frame_not_the_latest():
 
 def test_inference_error_skips_the_faulted_frame_and_not_the_latest():
     points = [
-        {"frame_index": 0, "tick": 0, "x": 0.2, "y": 0.3, "w": 0.1, "h": 0.4,
-         "confidence": 0.90, "face_quality": 0.92, "body_quality": 0.92},
-        {"frame_index": 1, "tick": 1, "x": 0.2, "y": 0.3, "w": 0.1, "h": 0.4,
-         "confidence": 0.99, "face_quality": 0.99, "body_quality": 0.99},
-        {"frame_index": 2, "tick": 2, "x": 0.2, "y": 0.3, "w": 0.1, "h": 0.4,
-         "confidence": 0.90, "face_quality": 0.40, "body_quality": 0.40},
+        {
+            "frame_index": 0,
+            "tick": 0,
+            "x": 0.2,
+            "y": 0.3,
+            "w": 0.1,
+            "h": 0.4,
+            "confidence": 0.90,
+            "face_quality": 0.92,
+            "body_quality": 0.92,
+        },
+        {
+            "frame_index": 1,
+            "tick": 1,
+            "x": 0.2,
+            "y": 0.3,
+            "w": 0.1,
+            "h": 0.4,
+            "confidence": 0.99,
+            "face_quality": 0.99,
+            "body_quality": 0.99,
+        },
+        {
+            "frame_index": 2,
+            "tick": 2,
+            "x": 0.2,
+            "y": 0.3,
+            "w": 0.1,
+            "h": 0.4,
+            "confidence": 0.90,
+            "face_quality": 0.40,
+            "body_quality": 0.40,
+        },
     ]
     faults = [{"frame_index": 1, "fault_type": "inference_error", "detail": "bad tensor"}]
     result = structure(points, faults)

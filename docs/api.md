@@ -2,6 +2,8 @@
 
 平台进程提供这些 HTTP 接口。业务 ID 和时间由 Java 生成。下面只列当前已经接通的路径。
 
+机器可校验的完整契约在 [../contracts/http-api.yaml](../contracts/http-api.yaml)。Java 测试使用 OpenAPI 解析器检查全部路由、必填响应、路径参数和写接口 token scheme。
+
 写接口只接受契约里的字段。多出来的字段、缺必填字段、类型不对或 JSON 不完整，返回 400。记录不属于当前 run，或 ID 不存在，返回 404。同一条记录重复提交，返回 409。
 
 本机写操作需要 token。设置 `TRACEWITNESS_API_TOKEN` 可固定它；不设置时进程自己生成。浏览器打开首页后，`GET /api/session` 只在本机回环地址返回 token，页面把它放进 `X-Trace-Token`。同源的 `tw_token` cookie 同样有效。没有 token 的写请求返回 401。读接口不需要 token。

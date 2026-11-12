@@ -11,27 +11,57 @@ from app.adapters import (
     require_clock,
     select_tool,
 )
-from app.vision import SAMPLE_FRAMES, analyze_sample
 from app.attributes import structure_case
+from app.vision import SAMPLE_FRAMES, analyze_sample
 
 app = FastAPI(title="TraceWitness AI")
 
-SELECT_TOOL_FIELDS = frozenset({
-    "run_id", "clock_mode", "request_timestamp", "tick",
-    "task", "tools", "tool_results", "model_seed",
-})
-REPORT_FIELDS = frozenset({
-    "run_id", "clock_mode", "request_timestamp", "tick",
-    "task", "tool_results", "model_seed", "citation_hint",
-})
-TRACK_FIELDS = frozenset({
-    "run_id", "clock_mode", "request_timestamp", "tick",
-    "frames", "frame_width", "frame_height",
-})
-STRUCTURE_FIELDS = frozenset({
-    "run_id", "clock_mode", "request_timestamp", "tick",
-    "case_key", "points", "faults",
-})
+SELECT_TOOL_FIELDS = frozenset(
+    {
+        "run_id",
+        "clock_mode",
+        "request_timestamp",
+        "tick",
+        "task",
+        "tools",
+        "tool_results",
+        "model_seed",
+    }
+)
+REPORT_FIELDS = frozenset(
+    {
+        "run_id",
+        "clock_mode",
+        "request_timestamp",
+        "tick",
+        "task",
+        "tool_results",
+        "model_seed",
+        "citation_hint",
+    }
+)
+TRACK_FIELDS = frozenset(
+    {
+        "run_id",
+        "clock_mode",
+        "request_timestamp",
+        "tick",
+        "frames",
+        "frame_width",
+        "frame_height",
+    }
+)
+STRUCTURE_FIELDS = frozenset(
+    {
+        "run_id",
+        "clock_mode",
+        "request_timestamp",
+        "tick",
+        "case_key",
+        "points",
+        "faults",
+    }
+)
 POINT_FIELDS = ("frame_index", "tick", "x", "y", "w", "h", "confidence")
 
 
@@ -84,13 +114,13 @@ def _points(body):
     for index, point in enumerate(points):
         for field in POINT_FIELDS:
             if field not in point:
-                raise ValueError("points[%d] missing %s" % (index, field))
+                raise ValueError(f"points[{index}] missing {field}")
         for field in ("frame_index", "tick"):
             if isinstance(point[field], bool) or not isinstance(point[field], int):
-                raise ValueError("points[%d].%s must be an integer" % (index, field))
+                raise ValueError(f"points[{index}].{field} must be an integer")
         for field in ("x", "y", "w", "h", "confidence"):
             if isinstance(point[field], bool) or not isinstance(point[field], (int, float)):
-                raise ValueError("points[%d].%s must be a number" % (index, field))
+                raise ValueError(f"points[{index}].{field} must be a number")
     if len(points) > 10000:
         raise ValueError("points is too large")
     return points

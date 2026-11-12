@@ -22,7 +22,7 @@
 | Node | v24.20.0 | 不阻塞。前端从第 2 周开始 |
 | Git | 2.55.0.windows.5 | 已可用 |
 
-写接口使用 `TRACEWITNESS_API_TOKEN`。不设置时，平台启动后在本机 `GET /api/session` 发放一次性 token。`scripts/http-audit.ps1` 用临时库检查审批、告警、回滚、难例、非法 JSON、404 和重复提交，不写 `data/local/`。
+写接口使用 `TRACEWITNESS_API_TOKEN`。不设置时，平台启动后在本机 `GET /api/session` 发放一次性 token。`scripts/http-audit.ps1` 用临时库自行启动服务，检查只读、安全头、上传、AI 输入边界、审批、告警、回滚、难例、非法 JSON、404 和重复提交，不写 `data/local/`。
 
 `run_mock.bat` 和 `run_eval.bat` 会寻找 Java 8。本机 `JAVA_HOME` 如果指向 Java 21，脚本改用 `JAVA_HOME_8`，或 `C:\Program Files\Eclipse Adoptium\jdk-8*`。找不到 Java 8 就停止，不用 PATH 上碰巧出现的 `java`。Gradle Wrapper 使用 7.6.4 的华为云镜像，因为 `services.gradle.org` 在这台机器上连接超时。依赖仓库同样先走阿里云，再回退 Maven Central。
 
@@ -38,6 +38,8 @@
 `run_mock.bat` 会启动这两个服务。端口已有进程监听时，脚本停止并提示，避免接到别的程序上。
 
 `run_mock.bat` 和 `run_eval.bat` 在 `ai-service\.venv` 不存在时会创建虚拟环境并安装固定依赖。干净 clone 可以直接执行评测，不依赖本机全局 Python 包。
+
+完整质量门禁执行 `scripts/quality-gate.ps1`。它会安装 `requirements-dev.txt`，运行 Java `clean check`、JaCoCo 覆盖率、Python 覆盖率、Ruff、Bandit、pip-audit、Java/Python SBOM 和 HTTP 审计。浏览器门禁执行 `scripts/browser-audit.ps1`，需要 `agent-browser`。
 
 ## 目录
 

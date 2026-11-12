@@ -1,0 +1,61 @@
+name: quality
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-quality:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "8"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Export Java 8 path
+        shell: pwsh
+        run: Add-Content $env:GITHUB_ENV "JAVA_HOME_8=$env:JAVA_HOME"
+
+      - name: Install browser audit tool
+        shell: pwsh
+        run: |
+          npm install --global agent-browser
+          agent-browser install
+
+      - name: Run quality gate
+        shell: pwsh
+        run: .\scripts\quality-gate.ps1
+
+      - name: Run one-click evaluation
+        shell: cmd
+        run: set NO_PAUSE=1&& run_eval.bat
+
+      - name: Run browser audit
+        shell: pwsh
+        run: .\scripts\browser-audit.ps1
+
+      - name: Upload quality evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tracewitness-quality-evidence
+          path: |
+            build/reports
+            platform/build/reports
+            platform/build/test-results
+            docs/eval-report.md

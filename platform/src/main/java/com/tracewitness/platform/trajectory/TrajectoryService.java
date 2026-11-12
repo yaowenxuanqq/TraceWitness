@@ -13,6 +13,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -226,21 +227,21 @@ public class TrajectoryService {
 
     private void seed(String runId) {
         List<Map<String, Object>> visits = new ArrayList<Map<String, Object>>();
-        String chenId = saveTrajectory(runId, "chen-walk", "resident-chen", visits,
+        String chenId = saveTrajectory(runId, "chen-walk", "resident-chen", visits, Arrays.asList(
                 point("a", "resident-chen", "lobby", 0),
                 point("b", "resident-chen", "unit-a", 40),
                 point("c", "resident-chen", "unit-b", 90),
-                point("d", "resident-chen", "roof", 100));
-        saveTrajectory(runId, "dwell-thin", "dwell-chen", visits,
+                point("d", "resident-chen", "roof", 100)));
+        saveTrajectory(runId, "dwell-thin", "dwell-chen", visits, Arrays.asList(
                 point("a", "dwell-chen", "lobby", 5000),
                 point("b", "dwell-chen", "lobby", 5010),
                 point("c", "dwell-chen", "lobby", 5020),
-                point("d", "dwell-chen", "stair", 5040));
-        saveTrajectory(runId, "fast-unit", "fast-chen", visits,
+                point("d", "dwell-chen", "stair", 5040)));
+        saveTrajectory(runId, "fast-unit", "fast-chen", visits, Arrays.asList(
                 point("f1", "fast-chen", "lobby", 10000),
-                point("f2", "fast-chen", "unit-b", 10010));
+                point("f2", "fast-chen", "unit-b", 10010)));
         saveTrajectory(runId, "companion-jia", "stranger-jia", visits,
-                point("j1", "stranger-jia", "lobby", 30));
+                Collections.singletonList(point("j1", "stranger-jia", "lobby", 30)));
         Map<String, Object> companionInput = new LinkedHashMap<String, Object>();
         companionInput.put("window_seconds", Integer.valueOf(TrajectoryPolicy.COMPANION_WINDOW));
         companionInput.put("visits", visits);
@@ -288,10 +289,10 @@ public class TrajectoryService {
     }
 
     private String saveTrajectory(String runId, String caseKey, String profile, List<Map<String, Object>> visits,
-                                  Map<String, Object>... points) {
+                                  List<Map<String, Object>> points) {
         Map<String, Object> input = new LinkedHashMap<String, Object>();
         List<Map<String, Object>> raw = new ArrayList<Map<String, Object>>();
-        Collections.addAll(raw, points);
+        raw.addAll(points);
         input.put("points", raw);
         Map<String, Object> evaluated = TrajectoryPolicy.evaluate("trajectory", input);
         @SuppressWarnings("unchecked")

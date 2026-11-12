@@ -29,4 +29,13 @@ def test_valid_report_keeps_fields():
 
 def test_extra_tool_field_is_rejected():
     with pytest.raises(ValueError, match="tool arguments"):
-        validate_tool_calls({"tool_calls": [{"tool_name": "search_events", "arguments": {"limit": 5, "unexpected": "accepted?"}}]})
+        validate_tool_calls(
+            {
+                "tool_calls": [
+                    {
+                        "tool_name": "search_events",
+                        "arguments": {"limit": 5, "unexpected": "accepted?"},
+                    }
+                ]
+            }
+        )

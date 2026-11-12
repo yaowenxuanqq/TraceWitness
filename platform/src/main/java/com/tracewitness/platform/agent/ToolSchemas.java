@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -47,9 +46,7 @@ public final class ToolSchemas {
         if (arguments == null) {
             return null;
         }
-        Iterator<Map.Entry<String, JsonNode>> fields = properties.fields();
-        while (fields.hasNext()) {
-            Map.Entry<String, JsonNode> field = fields.next();
+        for (Map.Entry<String, JsonNode> field : properties.properties()) {
             if (!arguments.containsKey(field.getKey()) || arguments.get(field.getKey()) == null) {
                 continue;
             }

@@ -12,6 +12,8 @@ The project is designed as a real Agent application rather than a chat-only demo
 
 Week 12 runs on the machine's installed Java 8. `run_mock.bat` still shows `MOCK_MODE`. The platform covers routing, tool-calling investigation, profiles, retrieval, trajectories, evidence verification, plugin checks, and hard cases. `run_eval.bat` writes the measured report at [docs/eval-report.md](docs/eval-report.md). See [docs/architecture.md](docs/architecture.md) and [docs/api.md](docs/api.md).
 
+Run `scripts\quality-gate.ps1` for Java/Python tests, coverage, static analysis, dependency audits, SBOM generation, and the HTTP audit. Run `scripts\browser-audit.ps1` for the browser interaction, accessibility, console-error, and mobile viewport checks.
+
 ## Planned Architecture
 
 ```text

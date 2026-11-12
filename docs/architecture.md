@@ -24,7 +24,7 @@ Java 持有评测时钟、业务 ID 和落库。Python 只收到调用里的 `ru
 
 `run_id` 固定为 `run-w02-mock-incident-20261110`。同一场景重复启动不会另起一套 ID。H2 使用文件库，进程重启后事件、Agent 运行和工具调用仍可查询。
 
-Mock 运行在接口和页面上显示 `MOCK_MODE`。这条链路不计入真实 Agent 指标。`OpenAICompatibleAdapter` 只保留接口，不发送模型请求。
+Mock 运行在接口和页面上显示 `MOCK_MODE`，不发送模型请求，这条链路不计入真实 Agent 指标。非 Mock 模式由 `OpenAICompatibleAdapter` 向配置的 OpenAI-compatible 地址发送请求；没有真实配置和实测记录时仍按未验收处理。
 
 ## 第 3 周媒体
 

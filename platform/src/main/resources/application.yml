@@ -2,7 +2,8 @@ server:
   address: 127.0.0.1
   port: 8080
   error:
-    include-message: always
+    include-message: never
+    include-stacktrace: never
 
 spring:
   application:

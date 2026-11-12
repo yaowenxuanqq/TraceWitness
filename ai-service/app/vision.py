@@ -4,10 +4,10 @@ Business timestamps are supplied by the caller. This module does not read the wa
 The ONNX graph is a synthetic luminance detector, not a trained weight file.
 """
 
-from decimal import Decimal, ROUND_HALF_UP
-from pathlib import Path
 import threading
 import time
+from decimal import ROUND_HALF_UP, Decimal
+from pathlib import Path
 
 import numpy as np
 import onnxruntime as ort
@@ -45,7 +45,7 @@ def sample_frame(index, width=1920, height=1080):
     box_h = 360
     x0 = 240 + index * 90
     y0 = 360
-    image[y0:y0 + box_h, x0:x0 + box_w] = 255
+    image[y0 : y0 + box_h, x0 : x0 + box_w] = 255
     return image
 
 
@@ -82,14 +82,16 @@ def boxes_from_luma(luma, threshold=THRESHOLD):
     y0 = int(ys.min())
     y1 = int(ys.max())
     height, width = mask.shape
-    confidence = Decimal(str(float(luma[0, 0, y0:y1 + 1, x0:x1 + 1].mean())))
-    return [{
-        "x": quantize(Decimal(x0) / Decimal(width)),
-        "y": quantize(Decimal(y0) / Decimal(height)),
-        "w": quantize(Decimal(x1 - x0 + 1) / Decimal(width)),
-        "h": quantize(Decimal(y1 - y0 + 1) / Decimal(height)),
-        "confidence": quantize(confidence),
-    }]
+    confidence = Decimal(str(float(luma[0, 0, y0 : y1 + 1, x0 : x1 + 1].mean())))
+    return [
+        {
+            "x": quantize(Decimal(x0) / Decimal(width)),
+            "y": quantize(Decimal(y0) / Decimal(height)),
+            "w": quantize(Decimal(x1 - x0 + 1) / Decimal(width)),
+            "h": quantize(Decimal(y1 - y0 + 1) / Decimal(height)),
+            "confidence": quantize(confidence),
+        }
+    ]
 
 
 def iou(a, b):
@@ -120,7 +122,7 @@ class Tracker:
             track = self._match(frame_index, box, used)
             if track is None:
                 self._seq += 1
-                track = {"local_id": "track-%d" % self._seq, "points": []}
+                track = {"local_id": f"track-{self._seq}", "points": []}
                 self.tracks.append(track)
             point = dict(box)
             point["frame_index"] = frame_index
@@ -154,12 +156,14 @@ def analyze_prepared(tensors, session=None):
         try:
             boxes = boxes_from_luma(run_luma(session, tensor))
         except InferenceError as exc:
-            faults.append({
-                "frame_index": index,
-                "tick": index,
-                "fault_type": "inference_error",
-                "detail": str(exc)[:500],
-            })
+            faults.append(
+                {
+                    "frame_index": index,
+                    "tick": index,
+                    "fault_type": "inference_error",
+                    "detail": str(exc)[:500],
+                }
+            )
             continue
         tracker.update(index, index, boxes)
     return {

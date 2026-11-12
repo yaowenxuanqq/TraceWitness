@@ -3,7 +3,7 @@
 Business timestamps stay with the caller. structure() invokes the attribute head once.
 """
 
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal
 
 FACE_MIN = Decimal("0.50")
 BODY_MIN = Decimal("0.50")
@@ -35,7 +35,7 @@ def passes_gate(point):
 
 def track_broken(points):
     ordered = sorted(points, key=lambda point: int(point["frame_index"]))
-    for previous, current in zip(ordered, ordered[1:]):
+    for previous, current in zip(ordered, ordered[1:], strict=False):
         if int(current["frame_index"]) - int(previous["frame_index"]) > TRACK_WINDOW:
             return True
     return False
@@ -85,18 +85,24 @@ def _point(frame_index, tick, face, body, confidence=0.90):
 
 
 def gate_failure_case():
-    return ([
-        _point(0, 0, 0.20, 0.80),
-        _point(1, 1, 0.10, 0.30),
-    ], [])
+    return (
+        [
+            _point(0, 0, 0.20, 0.80),
+            _point(1, 1, 0.10, 0.30),
+        ],
+        [],
+    )
 
 
 def track_break_case():
-    return ([
-        _point(0, 0, 0.90, 0.90),
-        _point(1, 1, 0.40, 0.40),
-        _point(8, 8, 0.70, 0.70),
-    ], [])
+    return (
+        [
+            _point(0, 0, 0.90, 0.90),
+            _point(1, 1, 0.40, 0.40),
+            _point(8, 8, 0.70, 0.70),
+        ],
+        [],
+    )
 
 
 def structure(points, faults=None):

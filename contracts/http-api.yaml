@@ -1,88 +1,570 @@
 openapi: 3.0.3
 info:
-  title: TraceWitness local write API
+  title: TraceWitness local HTTP API
   version: "0.4.0"
+  description: >
+    Loopback HTTP surface for the TraceWitness simulation. Read operations are
+    public on the local interface. State-changing operations require the
+    per-process local token returned by /api/session.
+servers:
+  - url: http://127.0.0.1:8080
 paths:
   /api/session:
     get:
-      summary: Loopback-only local write token
+      operationId: getLocalSession
+      summary: Return the local write token to a loopback client
+      responses:
+        "200":
+          description: Local token response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "404":
+          description: Request did not originate from the loopback interface
+  /api/health:
+    get:
+      operationId: getPlatformHealth
+      summary: Return platform readiness and mode
+      responses:
+        "200":
+          description: Platform health
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Health"
+  /api/mode:
+    get:
+      operationId: getPlatformMode
+      summary: Return the active simulation or model mode
+      responses:
+        "200":
+          description: Current mode
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mode"
+  /api/tools:
+    get:
+      operationId: listAgentTools
+      summary: List the implemented Agent tools
+      responses:
+        "200":
+          description: Tool descriptors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Tool"
+  /api/overview:
+    get:
+      operationId: getOverview
+      summary: Return the current run dashboard snapshot
+      responses:
+        "200":
+          description: Dashboard data for the current run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Object"
+  /api/sites:
+    get:
+      operationId: listSites
+      summary: List simulated sites in the current run
+      responses:
+        "200":
+          description: Site rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Object"
+  /api/devices:
+    get:
+      operationId: listDevices
+      summary: List simulated devices in the current run
+      responses:
+        "200":
+          description: Device rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Object"
+  /api/events:
+    get:
+      operationId: listEvents
+      summary: List recent events in the current run
+      responses:
+        "200":
+          description: Event rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Object"
+  /api/events/{id}:
+    get:
+      operationId: getEvent
+      summary: Return one event in the current run
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Event row
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Object"
+        "404":
+          description: Event not found in the current run
+  /api/agent/runs:
+    get:
+      operationId: listAgentRuns
+      summary: List Agent runs visible on the local dashboard
+      responses:
+        "200":
+          description: Agent run rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Object"
+  /api/agent/runs/{id}:
+    get:
+      operationId: getAgentRun
+      summary: Return one Agent run in the current run
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Agent run row
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Object"
+        "404":
+          description: Agent run not found in the current run
+  /api/agent/runs/{id}/tool-calls:
+    get:
+      operationId: listToolCalls
+      summary: List tool calls for one Agent run
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Tool call rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Object"
+        "404":
+          description: Agent run not found in the current run
+  /api/observations/{id}/thumbnail:
+    get:
+      operationId: getObservationThumbnail
+      summary: Return a redacted observation thumbnail
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: PNG thumbnail
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Thumbnail not found
   /api/profiles/tickets/{id}/decision:
     post:
+      operationId: decideProfileTicket
       summary: Approve or reject a merge ticket in the current run
+      security:
+        - TraceToken: []
       parameters:
-        - name: X-Trace-Token
-          in: header
-          required: true
-          schema: { type: string }
+        - $ref: "#/components/parameters/Id"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required: [decision, actor]
-              properties:
-                decision: { type: string, enum: [approve, reject] }
-                actor: { type: string }
+              $ref: "#/components/schemas/ActorDecision"
+      responses:
+        "200":
+          description: Decision applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Object"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /api/alerts/{id}/decision:
     post:
+      operationId: decideAlert
       summary: Confirm or reject an alert in the current run
+      security:
+        - TraceToken: []
+      parameters:
+        - $ref: "#/components/parameters/Id"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required: [decision, actor]
-              properties:
-                decision: { type: string, enum: [approve, reject] }
-                actor: { type: string }
+              $ref: "#/components/schemas/ActorDecision"
+      responses:
+        "200":
+          description: Decision applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Object"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /api/evidence/{id}/verify:
     post:
-      summary: Verify an evidence package in the current run
+      operationId: verifyEvidencePackage
+      summary: Verify an evidence package manifest in the current run
+      security:
+        - TraceToken: []
+      parameters:
+        - $ref: "#/components/parameters/Id"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              properties:
-                manifest: { type: string }
+              $ref: "#/components/schemas/EvidenceVerify"
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Object"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/hard-cases/{id}/label:
     post:
+      operationId: labelHardCase
       summary: Label a hard case in the current run
+      security:
+        - TraceToken: []
+      parameters:
+        - $ref: "#/components/parameters/Id"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required: [label, actor]
-              properties:
-                label:
-                  type: string
-                  enum: [true_positive, true_negative, false_positive, false_negative]
-                actor: { type: string }
+              $ref: "#/components/schemas/HardCaseLabel"
+      responses:
+        "200":
+          description: Label applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Object"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/hard-cases/export:
+    get:
+      operationId: exportHardCases
+      summary: Export labeled hard cases from the current run
+      responses:
+        "200":
+          description: Labeled hard case rows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Object"
   /api/plugins/{id}/fault:
     post:
-      summary: Inject a signature fault for an active plugin in the current run
+      operationId: injectPluginFault
+      summary: Inject a signature fault for an active plugin
+      security:
+        - TraceToken: []
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Fault injected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Object"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
   /api/plugins/rollback:
     post:
+      operationId: rollbackPlugin
       summary: Roll the current run back to the previous plugin
+      security:
+        - TraceToken: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              additionalProperties: false
-              required: [actor]
-              properties:
-                actor: { type: string }
+              $ref: "#/components/schemas/Rollback"
+      responses:
+        "200":
+          description: Rollback applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Object"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/media:
+    get:
+      operationId: getMediaTimeline
+      summary: Return media channels, segments, clips and uploads
+      responses:
+        "200":
+          description: Media timeline
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Object"
+  /api/media/assets/{id}/file:
+    get:
+      operationId: getMediaAsset
+      summary: Return a stored audio, video or synthetic asset
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Media bytes
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/media/segments/{id}/frames/{index}:
+    get:
+      operationId: getMediaFrame
+      summary: Return one frame from a synthetic media segment
+      parameters:
+        - $ref: "#/components/parameters/Id"
+        - name: index
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: PNG frame
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NotFound"
   /api/media/uploads:
     post:
+      operationId: uploadMedia
       summary: Upload a local audio or video file
+      security:
+        - TraceToken: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Uploaded media descriptor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaUpload"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+components:
+  securitySchemes:
+    TraceToken:
+      type: apiKey
+      in: header
+      name: X-Trace-Token
+      description: Per-process token obtained from the loopback-only /api/session endpoint.
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+  responses:
+    BadRequest:
+      description: Request body or field validation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Missing or invalid local write token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found in the current run
+    Conflict:
+      description: The requested state transition was already applied or is not allowed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Object"
+  schemas:
+    Object:
+      type: object
+      additionalProperties: true
+    Error:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: string
+    Session:
+      type: object
+      additionalProperties: false
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 1
+    Health:
+      type: object
+      additionalProperties: false
+      required: [service, mode, banner]
+      properties:
+        service:
+          type: string
+          enum: [platform]
+        mode:
+          type: string
+        banner:
+          type: string
+    Mode:
+      type: object
+      additionalProperties: false
+      required: [mode, mockMode, banner]
+      properties:
+        mode:
+          type: string
+        mockMode:
+          type: boolean
+        banner:
+          type: string
+    Tool:
+      type: object
+      additionalProperties: false
+      required: [name, implemented]
+      properties:
+        name:
+          type: string
+        implemented:
+          type: boolean
+    ActorDecision:
+      type: object
+      additionalProperties: false
+      required: [decision, actor]
+      properties:
+        decision:
+          type: string
+          enum: [approve, reject]
+        actor:
+          type: string
+          minLength: 1
+    EvidenceVerify:
+      type: object
+      additionalProperties: false
+      properties:
+        manifest:
+          type: string
+    HardCaseLabel:
+      type: object
+      additionalProperties: false
+      required: [label, actor]
+      properties:
+        label:
+          type: string
+          enum: [true_positive, true_negative, false_positive, false_negative]
+        actor:
+          type: string
+          minLength: 1
+    Rollback:
+      type: object
+      additionalProperties: false
+      required: [actor]
+      properties:
+        actor:
+          type: string
+          minLength: 1
+    MediaUpload:
+      type: object
+      additionalProperties: false
+      required: [id, contentType, url]
+      properties:
+        id:
+          type: string
+        contentType:
+          type: string
+        url:
+          type: string

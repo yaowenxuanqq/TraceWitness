@@ -20,8 +20,11 @@ set "PY=%REPO%\ai-service\.venv\Scripts\python.exe"
 if not exist "%PY%" (
   echo [eval] creating Python virtual environment
   py -3.13 -m venv "%REPO%\ai-service\.venv"
+  if errorlevel 1 py -3 -m venv "%REPO%\ai-service\.venv"
+  if errorlevel 1 python -m venv "%REPO%\ai-service\.venv"
   if errorlevel 1 goto fail
   "%PY%" -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple -r "%REPO%\ai-service\requirements.txt"
+  if errorlevel 1 "%PY%" -m pip install -r "%REPO%\ai-service\requirements.txt"
   if errorlevel 1 goto fail
 )
 
