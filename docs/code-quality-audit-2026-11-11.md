@@ -266,6 +266,10 @@ cmd /c "set NO_PAUSE=1&& set TRACEWITNESS_HTTP_AUDIT=1&& run_eval.bat"
 - 招聘方需要自行运行项目才能看到完整效果。
 - 作品集缺少可直接分享的展示材料。
 
+**根因**
+
+- 演示视频依赖真实模型链路先完成，当前 P0 未关闭，录制会得到 Mock 画面或未验证的真实画面。
+
 **修复方案**
 
 - 真实模型 P0 完成后再录视频。
@@ -329,11 +333,23 @@ latest supported version of H2 is 2.1.210
 - 任何能读源码的人都能伪造演示插件签名。
 - 不能把该验签能力写成生产安全能力。
 
+**根因**
+
+- 为了让离线演示不依赖密钥管理，签名密钥直接写在 `PluginPolicy`。
+
 **修复方案**
 
 - 保持演示范围，README 和简历明确标注“非生产签名体系”。
 - 长期改为非对称签名，仓库只保存公钥。
 - 私钥放到本地秘密存储，不进入源码。
+
+**验证命令**
+
+```powershell
+rg -n "SIGN_KEY" platform\src\main\java
+.\platform\gradlew.bat -p platform test --tests "*PluginPolicyTest"
+# 期望：测试通过；文档和源码都明确这是演示密钥
+```
 
 ### P2-03：未选择开源许可证（未解决）
 
@@ -346,10 +362,22 @@ latest supported version of H2 is 2.1.210
 
 - 公开仓库的复用、修改和分发授权不明确。
 
+**根因**
+
+- 项目还没有确定开源策略；当前只保留了 README 的“All rights reserved”描述。
+
 **修复方案**
 
 - 选择 MIT、Apache-2.0 或其他许可证并添加 `LICENSE`。
 - 同步更新 README 许可证说明和第三方依赖/模型台账。
+
+**验证命令**
+
+```powershell
+Test-Path LICENSE
+Select-String -Path README.md -Pattern "License|许可证"
+# 期望：LICENSE 存在，README 与文件一致
+```
 
 ### P2-04：构建依赖区域镜像和 Python 版本硬编码（部分保留）
 
@@ -364,11 +392,23 @@ latest supported version of H2 is 2.1.210
 - 中国网络环境构建较快；海外评审或镜像故障时首次构建可能失败。
 - 机器没有 `py -3.13` 时，脚本无法自动创建虚拟环境。
 
+**根因**
+
+- 脚本按当前开发机 Windows/中国网络环境优化，优先区域镜像并固定 Python 3.13。
+
 **修复方案**
 
 - 保留镜像，同时记录官方源回退和离线缓存做法。
 - 脚本优先使用 `py -3.13`，不可用时回退到满足 `requirements.txt` 的 `python`，并在启动前打印版本。
 - CI 使用固定官方源或可访问的镜像。
+
+**验证命令**
+
+```powershell
+py -3.13 --version
+cmd /c "set NO_PAUSE=1&& run_eval.bat"
+# 期望：当前环境退出码 0；换无 py-3.13 的机器时回退逻辑生效
+```
 
 ### P2-05：ID 序列读改写不是并发安全的（未解决）
 
@@ -391,6 +431,13 @@ latest supported version of H2 is 2.1.210
 - 改为数据库原子自增：`update id_sequence set seq = seq + 1 ...` 后读取，或使用 H2/数据库序列。
 - 对并发审批、告警、插件回滚增加并行测试。
 
+**验证命令**
+
+```powershell
+.\platform\gradlew.bat -p platform test
+# 修复后增加并发申请 ID 的测试；期望无主键冲突、无重复 ID
+```
+
 **本次已修：** `OutboxQueue` 的 `addAll` / `drain` 已改为同步方法，避免队列拷贝和清空竞态。
 
 ### P2-06：写接口没有认证，跨 run 写操作缺少隔离（未解决）
@@ -407,11 +454,22 @@ latest supported version of H2 is 2.1.210
 - 若未来暴露到局域网/公网，任何调用方都能审批、回滚或标注。
 - 多 run 场景下，知道 ID 的调用方可能操作其他 run 的记录。
 
+**根因**
+
+- 项目定位为单机回环演示，未引入认证层；写服务直接按主键查记录，没有统一 run 所有者校验。
+
 **修复方案**
 
 - 增加本地 token 或会话认证。
 - 所有写接口在服务层校验 `record.runId == currentRunId`。
 - 增加未认证、跨 run、重复请求测试。
+
+**验证命令**
+
+```powershell
+.\scripts\http-audit.ps1
+# 修复后增加：未带 token 的写请求 401；跨 run ID 的写请求 404
+```
 
 ### P2-07：Agent 异常被统一记成 `model_failed`（已加日志，行为保留）
 
@@ -425,10 +483,21 @@ latest supported version of H2 is 2.1.210
 - 失败分类不够细，排障时容易误判。
 - 本次已增加 `LOG.warn` 记录异常堆栈，避免完全静默。
 
+**根因**
+
+- 早期为了把模型失败统一转成“证据不足”报告，用了单一 catch 分支。
+
 **修复方案**
 
 - 区分 `model_failed`、`tool_failed`、`persistence_failed`、`citation_invalid`。
 - 在 Agent 运行记录中保存失败阶段和工具名。
+
+**验证命令**
+
+```powershell
+.\platform\gradlew.bat -p platform test --tests "*AgentWeek7Test"
+# 修复后增加：模型、工具、持久化三类失败分别断言失败类型
+```
 
 ### P2-08：Java Controller 请求体仍是宽松 `Map`（未解决）
 
@@ -443,11 +512,23 @@ latest supported version of H2 is 2.1.210
 - 调用方拼错字段时可能“请求成功但字段没生效”。
 - 审批和插件接口的输入契约不够 fail-closed。
 
+**根因**
+
+- Controller 为了少写 DTO 直接接收 `Map`，Spring 默认忽略未知字段。
+
 **修复方案**
 
 - 为审批、告警、证据、难例、插件回滚定义请求 DTO。
 - 使用 Bean Validation 或显式字段白名单，未知字段返回 400。
 - 增加额外字段、错误类型、缺字段测试。
+
+**验证命令**
+
+```powershell
+# 修复后对审批、告警、证据、难例、插件回滚分别发送额外字段
+# 期望：全部返回 400，而不是 200
+.\scripts\http-audit.ps1
+```
 
 ### P2-09：插件清单敏感字段暴露（本次已修复）
 
@@ -458,6 +539,10 @@ latest supported version of H2 is 2.1.210
 **影响**
 
 - 页面不需要这些字段，暴露它们扩大演示密钥和载荷的可见面。
+
+**根因**
+
+- 清单查询复用了内部完整行映射，API 直接返回了数据库字段。
 
 **修复**
 
@@ -481,6 +566,10 @@ latest supported version of H2 is 2.1.210
 
 - 调用方拼错字段不会 fail closed。
 - 视觉请求的 `frame_width` 没有上限，可能触发超大内存分配。
+
+**根因**
+
+- FastAPI 路由直接接收 `dict`，没有字段白名单、类型模型或尺寸边界。
 
 **修复**
 
@@ -507,6 +596,10 @@ latest supported version of H2 is 2.1.210
 - 开发者容易误判为测试类丢失或构建缓存损坏。
 - `run_eval.bat` 通过强制 Java 8 掩盖了直接 Gradle 路径的问题。
 
+**根因**
+
+- Gradle 7.6.4 只支持到 Java 19；直接 `gradlew.bat` 路径没有在配置阶段检查 `JAVA_HOME`。
+
 **修复**
 
 - `platform/build.gradle` 在配置阶段检查 Java 主版本，大于 19 时给出明确错误，提示设置 `JAVA_HOME` 到 JDK 8 或使用仓库脚本。
@@ -523,30 +616,15 @@ $env:JAVA_HOME='C:\Users\rghf5\apps\jdk-21.0.2'
 
 ## 7. P3：低优先级与工程卫生
 
-### P3-01：SVG 轨迹文字对比度无法被 axe 自动确认
+| 编号 | 证据 | 影响 | 根因 | 修复方案 | 验证命令 |
+| --- | --- | --- | --- | --- | --- |
+| P3-01 SVG 对比度 | 前次 axe 剩余 1 个 incomplete，涉及 7 个 SVG `text` 节点 | 无障碍审计不能完全自动通过，弱视用户可读性需要人工确认 | SVG 文字背景不是可自动推断的纯色块 | 给 SVG 增加明确背景矩形，固定文字和背景颜色 | 重跑 axe；人工截图检查 7 个文本节点 |
+| P3-02 错误 message | `application.yml` 配置 `server.error.include-message: always` | 错误响应可能带内部实现细节 | 为调试方便全局开启 | 改为 `never`，或只在开发 profile 开启 | 触发 500/400 检查响应不含内部路径或 SQL |
+| P3-03 outbox 全局更新 | `PlatformStore.publishRemaining` 更新所有 `PENDING` outbox | 多 run 时可能把别的 run 一起标记发布 | 早期只有固定单 run，方法没有 run 参数 | 给方法加 `run_id` 条件 | 建两个 run，发布 A 后检查 B 仍为 PENDING |
+| P3-04 SVG 坐标插值 | `web/app.js` 的 `polyline` / `circle` 坐标来自服务端数值，未逐项 `esc` | 当前数据源是 Java 整数，风险低；外部导入轨迹时可能被注入属性 | 前端假定轨迹坐标总是数字 | 用 DOM API 设置属性或强制 `Number()` 校验 | 传入非数字轨迹坐标，检查不进入 SVG 属性 |
+| P3-05 媒体格式白名单 | `MediaTypes` 只接受常见 MP4/MOV、WebM/MKV、WAV、MP3、OGG、FLAC、AAC、AVI、FLV、MPEG | 非常规但合法的音视频容器会被拒绝 | 安全修复优先覆盖常见浏览器格式 | 需要新格式时扩展 `MediaTypes` 和测试，不放宽成任意 `audio/*` / `video/*` | 对每种新增格式加魔数、扩展名和 MIME 测试 |
 
-- 前次审计剩余 1 个 axe incomplete，涉及 7 个 SVG `text` 节点。
-- 建议给 SVG 增加明确背景矩形或固定纯色背景，重跑 axe 并保留人工截图。
-
-### P3-02：`server.error.include-message: always`
-
-- 当前会把异常 message 放进错误响应。
-- 回环演示可接受；公开部署前建议改为 `never` 或只在开发 profile 开启，避免内部细节泄露。
-
-### P3-03：`publishRemaining` 不按 run 过滤
-
-- `PlatformStore.publishRemaining` 更新所有 `PENDING` outbox。
-- 当前只有固定 run，风险低；多 run 时应按 `run_id` 过滤。
-
-### P3-04：前端 SVG 坐标直接插值
-
-- `web/app.js` 的 SVG `polyline` / `circle` 坐标来自服务端数值，未逐项 `esc`。
-- 当前数据源是 Java 生成的整数，风险低；若未来允许外部导入轨迹，应改为数值校验或 DOM API 设置属性。
-
-### P3-05：上传魔数白名单会拒绝非常规容器
-
-- 本次修复优先安全，只接受常见 MP4/MOV、WebM/MKV、WAV、MP3、OGG、FLAC、AAC、AVI、FLV、MPEG。
-- 若需要更多格式，应扩展 `MediaTypes` 并加对应测试，而不是放宽成任意 `audio/*` / `video/*`。
+**优先级：** P3。以上问题不阻塞当前 Mock 演示，建议在公开部署或多人并发前处理。
 
 ---
 
