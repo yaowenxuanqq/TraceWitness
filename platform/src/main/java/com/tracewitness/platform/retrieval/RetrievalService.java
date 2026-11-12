@@ -70,7 +70,7 @@ public class RetrievalService {
 
     public Map<String, Object> decideAlert(String passageId, String decision, String actor) {
         Map<String, Object> passage = retrieval.findPassage(passageId);
-        if (passage == null) {
+        if (passage == null || !scenarios.runId().equals(passage.get("runId"))) {
             return null;
         }
         Map<String, Object> body = new LinkedHashMap<String, Object>();

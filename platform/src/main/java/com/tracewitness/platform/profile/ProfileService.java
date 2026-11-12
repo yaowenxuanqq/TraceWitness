@@ -88,7 +88,7 @@ public class ProfileService {
 
     public Map<String, Object> decideTicket(String ticketId, String decision, String actor) {
         Map<String, Object> ticket = profiles.findTicket(ticketId);
-        if (ticket == null) {
+        if (ticket == null || !scenarios.runId().equals(ticket.get("runId"))) {
             return null;
         }
         Map<String, Object> outcome = ProfilePolicy.approval(String.valueOf(ticket.get("status")), decision);

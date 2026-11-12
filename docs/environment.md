@@ -22,6 +22,8 @@
 | Node | v24.20.0 | 不阻塞。前端从第 2 周开始 |
 | Git | 2.55.0.windows.5 | 已可用 |
 
+写接口使用 `TRACEWITNESS_API_TOKEN`。不设置时，平台启动后在本机 `GET /api/session` 发放一次性 token。`scripts/http-audit.ps1` 用临时库检查审批、告警、回滚、难例、非法 JSON、404 和重复提交，不写 `data/local/`。
+
 `run_mock.bat` 和 `run_eval.bat` 会寻找 Java 8。本机 `JAVA_HOME` 如果指向 Java 21，脚本改用 `JAVA_HOME_8`，或 `C:\Program Files\Eclipse Adoptium\jdk-8*`。找不到 Java 8 就停止，不用 PATH 上碰巧出现的 `java`。Gradle Wrapper 使用 7.6.4 的华为云镜像，因为 `services.gradle.org` 在这台机器上连接超时。依赖仓库同样先走阿里云，再回退 Maven Central。
 
 直接运行 `platform\gradlew.bat` 时，`JAVA_HOME` 也必须指向 Java 8 到 Java 19。Gradle 7.6.4 不支持 Java 20/21；当前构建会在配置阶段给出明确错误，不再进入“测试类全部 ClassNotFoundException”的误导路径。

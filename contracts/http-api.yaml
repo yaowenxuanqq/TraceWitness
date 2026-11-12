@@ -1,0 +1,88 @@
+openapi: 3.0.3
+info:
+  title: TraceWitness local write API
+  version: "0.4.0"
+paths:
+  /api/session:
+    get:
+      summary: Loopback-only local write token
+  /api/profiles/tickets/{id}/decision:
+    post:
+      summary: Approve or reject a merge ticket in the current run
+      parameters:
+        - name: X-Trace-Token
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [decision, actor]
+              properties:
+                decision: { type: string, enum: [approve, reject] }
+                actor: { type: string }
+  /api/alerts/{id}/decision:
+    post:
+      summary: Confirm or reject an alert in the current run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [decision, actor]
+              properties:
+                decision: { type: string, enum: [approve, reject] }
+                actor: { type: string }
+  /api/evidence/{id}/verify:
+    post:
+      summary: Verify an evidence package in the current run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                manifest: { type: string }
+  /api/hard-cases/{id}/label:
+    post:
+      summary: Label a hard case in the current run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [label, actor]
+              properties:
+                label:
+                  type: string
+                  enum: [true_positive, true_negative, false_positive, false_negative]
+                actor: { type: string }
+  /api/plugins/{id}/fault:
+    post:
+      summary: Inject a signature fault for an active plugin in the current run
+  /api/plugins/rollback:
+    post:
+      summary: Roll the current run back to the previous plugin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [actor]
+              properties:
+                actor: { type: string }
+  /api/media/uploads:
+    post:
+      summary: Upload a local audio or video file

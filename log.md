@@ -1,3 +1,53 @@
+## 2026-11-12 - 写接口契约、本机 token 和 HTTP 回归
+- 修改人：AI助手
+- 影响文件：
+  - platform/src/main/java/com/tracewitness/platform/api/ApiController.java （修改）
+  - platform/src/main/java/com/tracewitness/platform/api/WriteTokenFilter.java （新增）
+  - platform/src/main/java/com/tracewitness/platform/api/dto/ （新增）
+  - platform/src/main/java/com/tracewitness/platform/config/LocalToken.java （新增）
+  - platform/src/main/java/com/tracewitness/platform/config/JsonConfig.java （新增）
+  - platform/src/main/java/com/tracewitness/platform/profile/ProfileService.java （修改）
+  - platform/src/main/java/com/tracewitness/platform/retrieval/RetrievalService.java （修改）
+  - platform/src/main/java/com/tracewitness/platform/trajectory/TrajectoryService.java （修改）
+  - platform/src/main/java/com/tracewitness/platform/plugin/PluginService.java （修改）
+  - platform/src/test/java/com/tracewitness/platform/WriteGateTest.java （新增）
+  - platform/src/test/java/com/tracewitness/platform/HttpContractFileTest.java （新增）
+  - contracts/http-api.yaml （新增）
+  - scripts/http-audit.ps1 （新增）
+  - web/app.js （修改）
+  - docs/api.md （修改）
+  - docs/environment.md （修改）
+  - log.md （修改）
+- 变更概要：
+  - 审批、告警、证据校验、难例标注和插件回滚改为明确请求对象，多余字段、缺字段和错误类型返回 400
+  - 写请求必须带本机 token；不属于当前 run 的记录返回 404；重复操作仍返回 409
+  - `scripts/http-audit.ps1` 用临时库复跑这些检查
+- 关联需求：代码质量方案里不依赖真实模型的写接口、token 和有状态 HTTP 回归
+
+## 2026-11-12 - 原子编号与 outbox 按 run 发布
+- 修改人：AI助手
+- 影响文件：
+  - platform/src/main/java/com/tracewitness/platform/store/PlatformStore.java （修改）
+  - platform/src/main/java/com/tracewitness/platform/outbox/OutboxPublisher.java （修改）
+  - platform/src/main/java/com/tracewitness/platform/scenario/ScenarioService.java （修改）
+  - platform/src/test/java/com/tracewitness/platform/StoreIsolationTest.java （新增）
+  - log.md （修改）
+- 变更概要：
+  - `nextId` 在同一事务里插入序列行、锁住该行再加一，避免并发读改写拿到同一个编号
+  - `publishRemaining` 和 `publishAll` 增加 `runId`，发布一个 run 时不再改写其他 run 的 PENDING
+- 关联需求：代码质量方案 G-09；真实模型地址尚未提供，本项不依赖模型
+
+## 2026-11-12 - 代码质量审计完善方案
+- 修改人：AI助手
+- 影响文件：
+  - docs/code-quality-improvement-plan-2026-11-12.md （新增）
+  - log.md （修改）
+- 变更概要：
+  - 基于既有代码质量审计，补充测试覆盖率、静态分析、依赖扫描、CI、真实 Agent 评测、浏览器回归、API 契约、并发一致性和可观测性缺口
+  - 给出按优先级、工作量、验收命令和完成标准组织的实施计划
+  - 指出审计报告中的修复项计数不一致，并建议拆分代码质量与正式验收口径
+- 关联需求：用户要求检查代码质量审计报告并编写完善方案
+
 ## 2026-11-11 17:52 - 最终测试审计
 - 修改人：AI助手
 - 影响文件：

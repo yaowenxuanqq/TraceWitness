@@ -4,15 +4,18 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tracewitness.platform.id.EntityIds;
+import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Savepoint;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -56,18 +59,82 @@ public class PlatformStore {
     }
 
     public String nextId(String runId, String entity) {
-        Long current = jdbc.query(
-                "select seq from id_sequence where run_id = ? and entity = ?",
-                rs -> rs.next() ? rs.getLong(1) : null,
-                runId,
-                entity);
-        long next = current == null ? 1 : current + 1;
-        if (current == null) {
-            jdbc.update("insert into id_sequence(run_id, entity, seq) values (?, ?, ?)", runId, entity, next);
-        } else {
-            jdbc.update("update id_sequence set seq = ? where run_id = ? and entity = ?", next, runId, entity);
+        Long seq = jdbc.execute((ConnectionCallback<Long>) connection -> allocate(connection, runId, entity));
+        if (seq == null) {
+            throw new IllegalStateException("id sequence missing");
         }
-        return EntityIds.format(entity, runId, next);
+        return EntityIds.format(entity, runId, seq);
+    }
+
+    private Long allocate(Connection connection, String runId, String entity) throws SQLException {
+        boolean opened = connection.getAutoCommit();
+        if (opened) {
+            connection.setAutoCommit(false);
+        }
+        try {
+            ensureSequence(connection, runId, entity);
+            long next = lockAndRead(connection, runId, entity) + 1;
+            try (PreparedStatement update = connection.prepareStatement(
+                    "update id_sequence set seq = ? where run_id = ? and entity = ?")) {
+                update.setLong(1, next);
+                update.setString(2, runId);
+                update.setString(3, entity);
+                if (update.executeUpdate() != 1) {
+                    throw new SQLException("id sequence missing");
+                }
+            }
+            if (opened) {
+                connection.commit();
+            }
+            return next;
+        } catch (SQLException | RuntimeException ex) {
+            if (opened) {
+                connection.rollback();
+            }
+            throw ex;
+        } finally {
+            if (opened) {
+                connection.setAutoCommit(true);
+            }
+        }
+    }
+
+    private void ensureSequence(Connection connection, String runId, String entity) throws SQLException {
+        Savepoint savepoint = connection.setSavepoint();
+        try (PreparedStatement insert = connection.prepareStatement(
+                "insert into id_sequence(run_id, entity, seq) "
+                        + "select ?, ?, 0 where not exists ("
+                        + "select 1 from id_sequence where run_id = ? and entity = ?)")) {
+            insert.setString(1, runId);
+            insert.setString(2, entity);
+            insert.setString(3, runId);
+            insert.setString(4, entity);
+            insert.executeUpdate();
+            connection.releaseSavepoint(savepoint);
+        } catch (SQLException ex) {
+            connection.rollback(savepoint);
+            if (!isDuplicate(ex)) {
+                throw ex;
+            }
+        }
+    }
+
+    private long lockAndRead(Connection connection, String runId, String entity) throws SQLException {
+        try (PreparedStatement select = connection.prepareStatement(
+                "select seq from id_sequence where run_id = ? and entity = ? for update")) {
+            select.setString(1, runId);
+            select.setString(2, entity);
+            try (ResultSet rows = select.executeQuery()) {
+                if (!rows.next()) {
+                    throw new SQLException("id sequence missing");
+                }
+                return rows.getLong(1);
+            }
+        }
+    }
+
+    private boolean isDuplicate(SQLException ex) {
+        return "23505".equals(ex.getSQLState());
     }
 
     public void insertSite(String id, String runId, String code, String name, BigDecimal xM, BigDecimal yM) {
@@ -112,10 +179,10 @@ public class PlatformStore {
         return published;
     }
 
-    public int publishRemaining(String publishedAt) {
+    public int publishRemaining(String runId, String publishedAt) {
         return jdbc.update(
-                "update outbox set status = 'PUBLISHED', published_at = ? where status = 'PENDING'",
-                publishedAt);
+                "update outbox set status = 'PUBLISHED', published_at = ? where run_id = ? and status = 'PENDING'",
+                publishedAt, runId);
     }
 
     public Map<String, Object> outboxCounts(String runId) {

@@ -1,7 +1,13 @@
 package com.tracewitness.platform.api;
 
+import com.tracewitness.platform.api.dto.ActorDecisionRequest;
+import com.tracewitness.platform.api.dto.EvidenceVerifyRequest;
+import com.tracewitness.platform.api.dto.HardLabelRequest;
+import com.tracewitness.platform.api.dto.RollbackRequest;
 import com.tracewitness.platform.config.AppProperties;
+import com.tracewitness.platform.config.LocalToken;
 import com.tracewitness.platform.scenario.ScenarioService;
+import com.tracewitness.platform.trajectory.TrajectoryPolicy;
 import com.tracewitness.platform.store.PlatformStore;
 import com.tracewitness.platform.store.PlatformStore.RunManifest;
 import com.tracewitness.platform.store.TrackStore;
@@ -19,6 +25,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+
+import javax.servlet.http.HttpServletRequest;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -39,10 +47,12 @@ public class ApiController {
     private final RetrievalService retrieval;
     private final TrajectoryService trajectories;
     private final PluginService plugins;
+    private final LocalToken token;
 
     public ApiController(AppProperties properties, ScenarioService scenarios, PlatformStore store, TrackStore tracks,
                          StructureService structure, RouteService routes, ProfileService profiles,
-                         RetrievalService retrieval, TrajectoryService trajectories, PluginService plugins) {
+                         RetrievalService retrieval, TrajectoryService trajectories, PluginService plugins,
+                         LocalToken token) {
         this.properties = properties;
         this.scenarios = scenarios;
         this.store = store;
@@ -53,6 +63,17 @@ public class ApiController {
         this.retrieval = retrieval;
         this.trajectories = trajectories;
         this.plugins = plugins;
+        this.token = token;
+    }
+
+    @GetMapping("/session")
+    public ResponseEntity<Map<String, Object>> session(HttpServletRequest request) {
+        if (!loopback(request)) {
+            return ResponseEntity.notFound().build();
+        }
+        Map<String, Object> body = new LinkedHashMap<String, Object>();
+        body.put("token", token.value());
+        return ResponseEntity.ok(body);
     }
 
     @GetMapping("/health")
@@ -185,37 +206,26 @@ public class ApiController {
     }
 
     @PostMapping("/profiles/tickets/{id}/decision")
-    public ResponseEntity<Map<String, Object>> decideTicket(@PathVariable String id, @RequestBody Map<String, Object> body) {
-        String decision = body.get("decision") == null ? "" : String.valueOf(body.get("decision"));
-        String actor = body.get("actor") == null ? "" : String.valueOf(body.get("actor"));
-        Map<String, Object> result = profiles.decideTicket(id, decision, actor);
-        if (result == null) {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<Map<String, Object>> decideTicket(@PathVariable String id, @RequestBody ActorDecisionRequest body) {
+        ResponseEntity<Map<String, Object>> rejected = decisionRequest(body);
+        if (rejected != null) {
+            return rejected;
         }
-        if (!Boolean.TRUE.equals(result.get("applied"))) {
-            return ResponseEntity.status(409).body(result);
-        }
-        return ResponseEntity.ok(result);
+        return applied(profiles.decideTicket(id, body.getDecision(), body.getActor().trim()));
     }
 
     @PostMapping("/alerts/{id}/decision")
-    public ResponseEntity<Map<String, Object>> decideAlert(@PathVariable String id, @RequestBody Map<String, Object> body) {
-        String decision = body.get("decision") == null ? "" : String.valueOf(body.get("decision"));
-        String actor = body.get("actor") == null ? "" : String.valueOf(body.get("actor"));
-        Map<String, Object> result = retrieval.decideAlert(id, decision, actor);
-        if (result == null) {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<Map<String, Object>> decideAlert(@PathVariable String id, @RequestBody ActorDecisionRequest body) {
+        ResponseEntity<Map<String, Object>> rejected = decisionRequest(body);
+        if (rejected != null) {
+            return rejected;
         }
-        if (!Boolean.TRUE.equals(result.get("applied"))) {
-            return ResponseEntity.status(409).body(result);
-        }
-        return ResponseEntity.ok(result);
+        return applied(retrieval.decideAlert(id, body.getDecision(), body.getActor().trim()));
     }
 
     @PostMapping("/evidence/{id}/verify")
-    public ResponseEntity<Map<String, Object>> verifyEvidence(@PathVariable String id, @RequestBody Map<String, Object> body) {
-        String manifest = body.get("manifest") == null ? null : String.valueOf(body.get("manifest"));
-        Map<String, Object> result = trajectories.verify(id, manifest);
+    public ResponseEntity<Map<String, Object>> verifyEvidence(@PathVariable String id, @RequestBody EvidenceVerifyRequest body) {
+        Map<String, Object> result = trajectories.verify(id, body.getManifest());
         if (result == null) {
             return ResponseEntity.notFound().build();
         }
@@ -223,17 +233,14 @@ public class ApiController {
     }
 
     @PostMapping("/hard-cases/{id}/label")
-    public ResponseEntity<Map<String, Object>> labelHardCase(@PathVariable String id, @RequestBody Map<String, Object> body) {
-        String label = body.get("label") == null ? "" : String.valueOf(body.get("label"));
-        String actor = body.get("actor") == null ? "" : String.valueOf(body.get("actor"));
-        Map<String, Object> result = trajectories.label(id, label, actor);
-        if (result == null) {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<Map<String, Object>> labelHardCase(@PathVariable String id, @RequestBody HardLabelRequest body) {
+        if (blank(body.getLabel()) || blank(body.getActor())) {
+            return invalid("missing_field");
         }
-        if (!Boolean.TRUE.equals(result.get("applied"))) {
-            return ResponseEntity.status(409).body(result);
+        if (!TrajectoryPolicy.LABELS.contains(body.getLabel())) {
+            return invalid("invalid_field");
         }
-        return ResponseEntity.ok(result);
+        return applied(trajectories.label(id, body.getLabel(), body.getActor().trim()));
     }
 
     @GetMapping("/hard-cases/export")
@@ -254,13 +261,44 @@ public class ApiController {
     }
 
     @PostMapping("/plugins/rollback")
-    public ResponseEntity<Map<String, Object>> pluginRollback(@RequestBody Map<String, Object> body) {
-        String actor = body.get("actor") == null ? "" : String.valueOf(body.get("actor"));
-        Map<String, Object> result = plugins.rollback(actor);
+    public ResponseEntity<Map<String, Object>> pluginRollback(@RequestBody RollbackRequest body) {
+        if (blank(body.getActor())) {
+            return invalid("missing_field");
+        }
+        return applied(plugins.rollback(body.getActor().trim()));
+    }
+
+    private ResponseEntity<Map<String, Object>> decisionRequest(ActorDecisionRequest body) {
+        if (body == null || blank(body.getDecision()) || blank(body.getActor())) {
+            return invalid("missing_field");
+        }
+        if (!"approve".equals(body.getDecision()) && !"reject".equals(body.getDecision())) {
+            return invalid("invalid_field");
+        }
+        return null;
+    }
+
+    private ResponseEntity<Map<String, Object>> applied(Map<String, Object> result) {
+        if (result == null) {
+            return ResponseEntity.notFound().build();
+        }
         if (!Boolean.TRUE.equals(result.get("applied"))) {
             return ResponseEntity.status(409).body(result);
         }
         return ResponseEntity.ok(result);
+    }
+
+    private static ResponseEntity<Map<String, Object>> invalid(String error) {
+        return ResponseEntity.badRequest().body(Collections.<String, Object>singletonMap("error", error));
+    }
+
+    private static boolean blank(String value) {
+        return value == null || value.trim().isEmpty();
+    }
+
+    private static boolean loopback(HttpServletRequest request) {
+        String remote = request.getRemoteAddr();
+        return "127.0.0.1".equals(remote) || "::1".equals(remote) || "0:0:0:0:0:0:0:1".equals(remote);
     }
 
     private static Map<String, Object> manifestView(RunManifest manifest) {

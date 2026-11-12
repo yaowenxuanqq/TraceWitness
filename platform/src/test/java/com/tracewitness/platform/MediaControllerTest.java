@@ -2,7 +2,9 @@ package com.tracewitness.platform;
 
 import com.tracewitness.platform.api.MediaController;
 import com.tracewitness.platform.api.SecurityHeadersFilter;
+import com.tracewitness.platform.config.LocalToken;
 import com.tracewitness.platform.media.MediaService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -34,6 +36,15 @@ class MediaControllerTest {
     @MockBean
     private MediaService media;
 
+    @MockBean
+    private LocalToken token;
+
+    @BeforeEach
+    void allowLocalToken() {
+        when(token.value()).thenReturn("test-token");
+        when(token.matches("test-token")).thenReturn(true);
+    }
+
     @Test
     void assetResponseCarriesBrowserHardeningHeaders() throws Exception {
         Map<String, Object> row = new LinkedHashMap<String, Object>();
@@ -56,7 +67,7 @@ class MediaControllerTest {
         when(media.storeUpload(anyString(), anyString(), any(byte[].class)))
                 .thenThrow(new IllegalArgumentException("unsupported media type"));
 
-        mvc.perform(multipart("/api/media/uploads").file(file))
+        mvc.perform(multipart("/api/media/uploads").file(file).header("X-Trace-Token", "test-token"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("unsupported media type"));
     }

@@ -62,7 +62,7 @@ public class PluginService {
 
     public Map<String, Object> fault(String id) {
         Map<String, Object> row = plugins.findManifest(id);
-        if (row == null) {
+        if (row == null || !scenarios.runId().equals(row.get("runId"))) {
             return null;
         }
         Map<String, Object> result = new LinkedHashMap<String, Object>();

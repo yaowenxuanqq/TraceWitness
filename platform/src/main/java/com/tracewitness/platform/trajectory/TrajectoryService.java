@@ -74,7 +74,7 @@ public class TrajectoryService {
 
     public Map<String, Object> verify(String packageId, String submitted) {
         Map<String, Object> stored = trajectories.findPackage(packageId);
-        if (stored == null) {
+        if (stored == null || !scenarios.runId().equals(stored.get("runId"))) {
             return null;
         }
         Map<String, Object> body = new LinkedHashMap<String, Object>();
@@ -97,7 +97,7 @@ public class TrajectoryService {
 
     public Map<String, Object> label(String hardCaseId, String label, String actor) {
         Map<String, Object> hardCase = trajectories.findHardCase(hardCaseId);
-        if (hardCase == null) {
+        if (hardCase == null || !scenarios.runId().equals(hardCase.get("runId"))) {
             return null;
         }
         Map<String, Object> body = new LinkedHashMap<String, Object>();

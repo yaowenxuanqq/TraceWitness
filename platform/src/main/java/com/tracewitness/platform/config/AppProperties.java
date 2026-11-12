@@ -8,6 +8,7 @@ public class AppProperties {
     private String aiBaseUrl = "http://127.0.0.1:8000";
     private boolean autoLoop = true;
     private String mediaDir = "data/local/media";
+    private String apiToken = "";
     private Eval eval = new Eval();
 
     public boolean mock() {
@@ -48,6 +49,14 @@ public class AppProperties {
 
     public void setMediaDir(String mediaDir) {
         this.mediaDir = mediaDir;
+    }
+
+    public String getApiToken() {
+        return apiToken;
+    }
+
+    public void setApiToken(String apiToken) {
+        this.apiToken = apiToken;
     }
 
     public Eval getEval() {

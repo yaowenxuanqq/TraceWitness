@@ -54,13 +54,13 @@ public class ScenarioService {
         RunManifest existing = store.findManifest(runId);
         if (existing != null) {
             timeSource.load(ClockMode.valueOf(existing.getClockMode()), existing.getEpochStart(), existing.getTickMs(), existing.getTick());
-            publisher.publishAll();
+            publisher.publishAll(runId);
             return;
         }
         ScenarioScript script = readScript();
         List<Long> outboxIds = transactions.execute(status -> seed(runId, script));
         queue.addAll(outboxIds == null ? Collections.<Long>emptyList() : outboxIds);
-        publisher.publishAll();
+        publisher.publishAll(runId);
     }
 
     private List<Long> seed(String runId, ScenarioScript script) {

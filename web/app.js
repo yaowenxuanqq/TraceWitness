@@ -1,3 +1,16 @@
+let writeToken = "";
+
+function authHeaders(json) {
+  const headers = {};
+  if (writeToken) {
+    headers["X-Trace-Token"] = writeToken;
+  }
+  if (json) {
+    headers["Content-Type"] = "application/json";
+  }
+  return headers;
+}
+
 function esc(value) {
   return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
     "&": "&amp;",
@@ -103,7 +116,7 @@ function renderRetrieval(overview) {
     button.addEventListener("click", () => {
       fetch("/api/alerts/" + button.dataset.id + "/decision", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(true),
         body: JSON.stringify({ decision: button.dataset.decision, actor: "investigator" })
       }).then((response) => {
         if (!response.ok) {
@@ -159,7 +172,7 @@ function renderTrails(overview) {
       const body = button.dataset.kind === "tamper" ? { manifest: "tampered\n" } : {};
       fetch("/api/evidence/" + button.dataset.id + "/verify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(true),
         body: JSON.stringify(body)
       }).then((response) => response.json()).then((result) => {
         button.insertAdjacentText("afterend", result.valid ? " 校验通过" : " 校验失败");
@@ -190,7 +203,7 @@ function renderTrails(overview) {
       }
       fetch("/api/hard-cases/" + button.dataset.id + "/label", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(true),
         body: JSON.stringify({ label: "true_negative", actor: "investigator" })
       }).then((response) => {
         if (!response.ok) {
@@ -231,10 +244,10 @@ function renderPlugins(overview) {
       const request = button.dataset.kind === "rollback"
         ? fetch("/api/plugins/rollback", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: authHeaders(true),
           body: JSON.stringify({ actor: "investigator" })
         })
-        : fetch("/api/plugins/" + button.dataset.id + "/fault", { method: "POST" });
+        : fetch("/api/plugins/" + button.dataset.id + "/fault", { method: "POST", headers: authHeaders(false) });
       request.then((response) => {
         if (!response.ok) {
           throw new Error("插件操作没有写入");
@@ -303,7 +316,7 @@ function renderProfiles(overview) {
     button.addEventListener("click", () => {
       fetch("/api/profiles/tickets/" + button.dataset.id + "/decision", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(true),
         body: JSON.stringify({ decision: button.dataset.decision, actor: "investigator" })
       }).then((response) => {
         if (!response.ok) {
@@ -408,7 +421,7 @@ document.getElementById("upload").addEventListener("submit", (event) => {
   }
   const body = new FormData();
   body.append("file", input.files[0]);
-  fetch("/api/media/uploads", { method: "POST", body })
+  fetch("/api/media/uploads", { method: "POST", headers: authHeaders(false), body })
     .then((response) => {
       if (!response.ok) {
         throw new Error("upload " + response.status);
@@ -421,7 +434,14 @@ document.getElementById("upload").addEventListener("submit", (event) => {
     });
 });
 
-Promise.all([
+fetch("/api/session").then((response) => {
+  if (!response.ok) {
+    throw new Error("session " + response.status);
+  }
+  return response.json();
+}).then((session) => {
+  writeToken = session.token || "";
+  return Promise.all([
   fetch("/api/overview").then((response) => {
     if (!response.ok) {
       throw new Error("overview " + response.status);
@@ -434,7 +454,8 @@ Promise.all([
     }
     return response.json();
   })
-]).then(([overview, media]) => {
+  ]);
+}).then(([overview, media]) => {
   render(overview);
   renderMedia(media);
 }).catch((error) => {

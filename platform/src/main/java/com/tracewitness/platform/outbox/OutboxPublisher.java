@@ -16,9 +16,9 @@ public class OutboxPublisher {
         this.timeSource = timeSource;
     }
 
-    public int publishAll() {
+    public int publishAll(String runId) {
         String publishedAt = timeSource.formatNow();
         int published = store.publishIds(queue.drain(), publishedAt);
-        return published + store.publishRemaining(publishedAt);
+        return published + store.publishRemaining(runId, publishedAt);
     }
 }

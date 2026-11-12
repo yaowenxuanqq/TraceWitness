@@ -25,6 +25,7 @@ spring:
 tracewitness:
   mode: ${TRACEWITNESS_MODE:MOCK}
   ai-base-url: ${TRACEWITNESS_AI_BASE_URL:http://127.0.0.1:8000}
+  api-token: ${TRACEWITNESS_API_TOKEN:}
   auto-loop: true
   eval:
     scenario-id: w02-mock-incident
