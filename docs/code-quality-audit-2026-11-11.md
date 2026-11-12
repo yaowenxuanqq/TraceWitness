@@ -606,6 +606,7 @@ $env:JAVA_HOME='C:\Users\rghf5\apps\jdk-21.0.2'
 ### 11.1 已验证
 
 - `run_eval.bat` 在本机工作区退出码 0。
+- 最终代码提交 `71117d5` 的干净 clone 执行 `run_eval.bat` 退出码 0；脚本自动创建 `ai-service/.venv`、按 `requirements.txt` 安装固定依赖，并完成 Java 36、Python 22、检测基准、四路基准和报告生成。
 - 全新 H2 文件库执行 9 个迁移成功。
 - Python `.venv` 依赖完整，22 个测试通过。
 - Java 8 下 36 个测试通过。
@@ -613,7 +614,6 @@ $env:JAVA_HOME='C:\Users\rghf5\apps\jdk-21.0.2'
 
 ### 11.2 仍需验证/改进
 
-- 干净 clone 的最终提交需要在本次提交后复跑 `run_eval.bat`。
 - `run_eval.bat` / `run_mock.bat` 硬编码 `py -3.13`（P2-04）。
 - Gradle distribution 和 Maven 依赖优先区域镜像（P2-04）。
 - `spring.web.resources.static-locations: file:web/` 依赖工作目录；`bootRun` 已设置 `workingDir = ..`，直接运行 jar 时需从仓库根启动。
@@ -704,6 +704,7 @@ $env:JAVA_HOME='C:\Users\rghf5\apps\jdk-21.0.2'
 - [x] Java 36/36 测试通过。
 - [x] Python 22/22 测试通过。
 - [x] `run_eval.bat` 退出码 0。
+- [x] 最终代码提交干净 clone 的 `run_eval.bat` 退出码 0。
 - [x] 全新 H2 数据库 9 个迁移成功。
 - [x] `scripts/http-audit.ps1` 22/22 通过。
 - [x] 全新库有状态链路 7/7 通过。
