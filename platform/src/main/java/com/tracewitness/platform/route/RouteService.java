@@ -87,8 +87,12 @@ public class RouteService {
     }
 
     public List<Map<String, Object>> list() {
+        return list(Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> list(int limit, int offset) {
         List<Map<String, Object>> rows = new ArrayList<Map<String, Object>>();
-        for (Map<String, Object> row : decisions.list(scenarios.runId())) {
+        for (Map<String, Object> row : decisions.list(scenarios.runId(), limit, offset)) {
             rows.add(view(row));
         }
         return rows;

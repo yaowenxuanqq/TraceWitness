@@ -132,10 +132,11 @@ class MockAdapter:
 
 
 class OpenAICompatibleAdapter:
-    def __init__(self, base_url: str, api_key: str, model: str) -> None:
+    def __init__(self, base_url: str, api_key: str, model: str, allow_empty_key: bool = False) -> None:
         self.base_url = (base_url or "").rstrip("/")
         self.api_key = api_key or ""
         self.model = model or ""
+        self.allow_empty_key = bool(allow_empty_key)
 
     def select_tool(
         self, task: str, tools: list[str], tool_results: list | None = None, model_seed: int = 20261110
@@ -196,7 +197,7 @@ class OpenAICompatibleAdapter:
         return validate_report(_parse_json_content(message))
 
     def _configured(self) -> None:
-        if not self.base_url or not self.api_key or not self.model:
+        if not self.base_url or not self.model or (not self.api_key and not self.allow_empty_key):
             raise ModelNotConfigured("模型 API 未配置")
         if urlparse(self.base_url).scheme not in ("http", "https"):
             raise ModelNotConfigured("模型 API 地址只允许 http 或 https")
@@ -215,12 +216,18 @@ class OpenAICompatibleAdapter:
         try:
             # _configured() restricts the URL to http or https.
             with request.urlopen(req, timeout=30) as response:  # nosec B310
-                data = json.loads(response.read().decode("utf-8"))
+                raw = response.read()
         except error.HTTPError as exc:
             detail = exc.read().decode("utf-8", errors="replace")
             raise ModelCallFailed("model http " + str(exc.code) + " " + detail[:300]) from exc
+        except TimeoutError as exc:
+            raise ModelCallFailed("model timeout") from exc
         except error.URLError as exc:
             raise ModelCallFailed("model unreachable") from exc
+        try:
+            data = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ModelCallFailed("model content is not json") from exc
         try:
             return data["choices"][0]["message"]
         except (KeyError, IndexError, TypeError) as exc:
@@ -328,7 +335,10 @@ def _parse_tool_calls(message: dict, allowed: list[str]) -> list[dict]:
         if name not in allowed:
             continue
         raw = function.get("arguments") or "{}"
-        arguments = json.loads(raw) if isinstance(raw, str) else raw
+        try:
+            arguments = json.loads(raw) if isinstance(raw, str) else raw
+        except (json.JSONDecodeError, TypeError) as exc:
+            raise ModelCallFailed("model tool arguments are not json") from exc
         if not isinstance(arguments, dict):
             arguments = {}
         calls.append({"tool_name": name, "arguments": arguments})

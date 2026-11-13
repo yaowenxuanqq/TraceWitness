@@ -105,8 +105,12 @@ public class StructureService {
     }
 
     public List<Map<String, Object>> list() {
+        return list(Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> list(int limit, int offset) {
         List<Map<String, Object>> rows = new ArrayList<Map<String, Object>>();
-        for (Map<String, Object> row : observations.list(scenarios.runId())) {
+        for (Map<String, Object> row : observations.list(scenarios.runId(), limit, offset)) {
             rows.add(view(row));
         }
         return rows;
@@ -114,7 +118,7 @@ public class StructureService {
 
     public byte[] readThumbnail(String id) throws IOException {
         Map<String, Object> row = observations.find(id);
-        if (row == null) {
+        if (row == null || !scenarios.runId().equals(row.get("runId"))) {
             return null;
         }
         return Files.readAllBytes(resolve(String.valueOf(row.get("thumbnailPath"))));

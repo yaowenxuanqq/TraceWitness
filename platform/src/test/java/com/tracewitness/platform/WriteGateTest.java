@@ -70,14 +70,27 @@ class WriteGateTest {
                     "{", "test-token").getStatusCodeValue());
             assertEquals(404, post(http, root + "/api/profiles/tickets/tw.ticket.missing.000001/decision",
                     "{\"decision\":\"approve\",\"actor\":\"investigator\"}", "test-token").getStatusCodeValue());
+            String longActor = new String(new char[65]).replace('\0', 'a');
+            assertEquals(400, post(http, root + "/api/profiles/tickets/" + ticket + "/decision",
+                    "{\"decision\":\"approve\",\"actor\":\"" + longActor + "\"}", "test-token").getStatusCodeValue());
 
             JdbcTemplate jdbc = context.getBean(JdbcTemplate.class);
             jdbc.update("insert into merge_ticket(id, run_id, case_key, ticket_kind, status, reason, detail, created_at) "
                             + "values ('tw.ticket.run-other.000001', 'run-other', 'foreign', 'merge', 'pending_human', 'ambiguous', 'other', '2026-01-01T00:00:00.000Z')");
+            jdbc.update("insert into agent_run(id, run_id, task, status, mock_mode, conclusion, insufficient_evidence, "
+                            + "confidence, source_ids, failure_type, requested_actions, created_at) "
+                            + "values ('tw.agent.run-other.000001', 'run-other', 'foreign', 'COMPLETED', true, "
+                            + "'foreign', false, 1.00, '[]', null, '[]', '2026-01-01T00:00:00.000Z')");
             assertEquals(404, post(http, root + "/api/profiles/tickets/tw.ticket.run-other.000001/decision",
                     "{\"decision\":\"approve\",\"actor\":\"investigator\"}", "test-token").getStatusCodeValue());
             assertEquals("pending_human", jdbc.queryForObject(
                     "select status from merge_ticket where id = 'tw.ticket.run-other.000001'", String.class));
+            JsonNode runs = http.getForObject(root + "/api/agent/runs", JsonNode.class);
+            assertNotNull(runs);
+            assertEquals(1, runs.size());
+            for (JsonNode run : runs) {
+                assertEquals("run-w02-mock-incident-20261110", run.path("runId").asText());
+            }
 
             HttpHeaders cookie = new HttpHeaders();
             ResponseEntity<String> health = http.exchange(root + "/api/health", HttpMethod.GET, new HttpEntity<String>(cookie), String.class);

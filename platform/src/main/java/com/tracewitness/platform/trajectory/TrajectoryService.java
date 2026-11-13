@@ -1,6 +1,7 @@
 package com.tracewitness.platform.trajectory;
 
 import com.tracewitness.platform.media.MediaService;
+import com.tracewitness.platform.config.AppProperties;
 import com.tracewitness.platform.scenario.ScenarioService;
 import com.tracewitness.platform.store.PlatformStore;
 import com.tracewitness.platform.store.PlatformStore.RunManifest;
@@ -56,20 +57,30 @@ public class TrajectoryService {
         });
     }
 
-    public Map<String, Object> overview() {
+    public Map<String, Object> overview(AppProperties.Overview limits) {
         String runId = scenarios.runId();
         List<Map<String, Object>> rows = new ArrayList<Map<String, Object>>();
-        for (Map<String, Object> trajectory : trajectories.listTrajectories(runId)) {
-            trajectory.put("points", trajectories.listPoints(String.valueOf(trajectory.get("id"))));
+        boolean childrenTruncated = false;
+        for (Map<String, Object> trajectory : trajectories.listTrajectories(runId, limits.getTrajectories(), 0)) {
+            String trajectoryId = String.valueOf(trajectory.get("id"));
+            List<Map<String, Object>> points = trajectories.listPoints(trajectoryId, limits.getChildItems());
+            childrenTruncated = childrenTruncated || trajectories.countPoints(trajectoryId) > points.size();
+            trajectory.put("points", points);
             trajectory.put("thinRule", TrajectoryPolicy.THIN_RULE);
             rows.add(trajectory);
         }
         Map<String, Object> body = new LinkedHashMap<String, Object>();
         body.put("trajectories", rows);
-        body.put("companions", trajectories.listCompanions(runId));
-        body.put("packages", trajectories.listPackages(runId));
-        body.put("hardCases", trajectories.listHardCases(runId));
-        body.put("compares", trajectories.listCompares(runId));
+        body.put("companions", trajectories.listCompanions(runId, limits.getCompanions(), 0));
+        body.put("packages", trajectories.listPackages(runId, limits.getPackages(), 0));
+        body.put("hardCases", trajectories.listHardCases(runId, limits.getHardCases(), 0));
+        body.put("compares", trajectories.listCompares(runId, limits.getCompares(), 0));
+        body.put("trajectoriesTotal", Integer.valueOf(trajectories.countTrajectories(runId)));
+        body.put("companionsTotal", Integer.valueOf(trajectories.countTable("companion_link", runId)));
+        body.put("packagesTotal", Integer.valueOf(trajectories.countTable("evidence_package", runId)));
+        body.put("hardCasesTotal", Integer.valueOf(trajectories.countTable("hard_case", runId)));
+        body.put("comparesTotal", Integer.valueOf(trajectories.countTable("model_compare", runId)));
+        body.put("childrenTruncated", Boolean.valueOf(childrenTruncated));
         return body;
     }
 

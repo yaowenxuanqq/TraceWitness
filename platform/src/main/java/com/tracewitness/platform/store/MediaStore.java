@@ -9,6 +9,8 @@ import java.util.Map;
 
 @Repository
 public class MediaStore {
+    private static final String ASSET_COLUMNS = "select id, run_id, device_id, event_id, kind, source_kind, content_type, storage_path, start_tick, end_tick, sample_rate, sample_count, audio_continuous, created_at, status, sha256, size_bytes from media_asset";
+
     private final JdbcTemplate jdbc;
 
     public MediaStore(JdbcTemplate jdbc) {
@@ -38,19 +40,34 @@ public class MediaStore {
                 id, runId, deviceId, tick, profile, fps, frameCount, audioStartSample, audioSampleCount, frameDir);
     }
 
+    public void insertUploading(String id, String runId, String contentType, String storagePath, String createdAt) {
+        jdbc.update("insert into media_asset(id, run_id, device_id, event_id, kind, source_kind, content_type, storage_path, start_tick, end_tick, sample_rate, sample_count, audio_continuous, created_at, status) values (?, ?, null, null, 'UPLOAD', 'FILE', ?, ?, null, null, null, null, null, ?, 'UPLOADING')",
+                id, runId, contentType, storagePath, createdAt);
+    }
+
+    public void updateState(String id, String status, String sha256, Long sizeBytes) {
+        jdbc.update("update media_asset set status = ?, sha256 = coalesce(?, sha256), size_bytes = coalesce(?, size_bytes) where id = ?",
+                status, sha256, sizeBytes, id);
+    }
+
+    public List<Map<String, Object>> listRecoverable() {
+        return jdbc.query(ASSET_COLUMNS + " where status in ('UPLOADING', 'STAGED', 'READY') order by created_at, id",
+                (rs, rowNum) -> assetRow(rs));
+    }
+
     public Map<String, Object> findAsset(String id) {
-        List<Map<String, Object>> rows = jdbc.query("select id, run_id, device_id, event_id, kind, source_kind, content_type, storage_path, start_tick, end_tick, sample_rate, sample_count, audio_continuous, created_at from media_asset where id = ?",
+        List<Map<String, Object>> rows = jdbc.query(ASSET_COLUMNS + " where id = ?",
                 (rs, rowNum) -> assetRow(rs), id);
         return rows.isEmpty() ? null : rows.get(0);
     }
 
     public List<Map<String, Object>> listAssets(String runId, String kind) {
-        return jdbc.query("select id, run_id, device_id, event_id, kind, source_kind, content_type, storage_path, start_tick, end_tick, sample_rate, sample_count, audio_continuous, created_at from media_asset where run_id = ? and kind = ? order by start_tick, id",
+        return jdbc.query(ASSET_COLUMNS + " where run_id = ? and kind = ? and status = 'READY' order by start_tick, id",
                 (rs, rowNum) -> assetRow(rs), runId, kind);
     }
 
     public List<Map<String, Object>> listUploads(String runId) {
-        return jdbc.query("select id, run_id, device_id, event_id, kind, source_kind, content_type, storage_path, start_tick, end_tick, sample_rate, sample_count, audio_continuous, created_at from media_asset where run_id = ? and kind = 'UPLOAD' order by created_at, id",
+        return jdbc.query(ASSET_COLUMNS + " where run_id = ? and kind = 'UPLOAD' and status = 'READY' order by created_at, id",
                 (rs, rowNum) -> assetRow(rs), runId);
     }
 
@@ -107,6 +124,9 @@ public class MediaStore {
         row.put("sampleCount", rs.getObject("sample_count") == null ? null : rs.getLong("sample_count"));
         row.put("audioContinuous", rs.getObject("audio_continuous") == null ? null : rs.getBoolean("audio_continuous"));
         row.put("createdAt", rs.getString("created_at"));
+        row.put("status", rs.getString("status"));
+        row.put("sha256", rs.getString("sha256"));
+        row.put("sizeBytes", rs.getObject("size_bytes") == null ? null : Long.valueOf(rs.getLong("size_bytes")));
         return row;
     }
 }

@@ -70,6 +70,20 @@ def test_vision_track_rejects_oversized_width():
     assert "frame_width is above maximum" in error.value.detail
 
 
+def test_vision_track_rejects_total_pixel_budget():
+    with pytest.raises(HTTPException) as error:
+        vision_track(
+            {
+                **CLOCK,
+                "frames": 30,
+                "frame_width": 4096,
+                "frame_height": 4096,
+            }
+        )
+    assert error.value.status_code == 400
+    assert "pixel budget" in error.value.detail
+
+
 def test_vision_structure_requires_point_fields():
     with pytest.raises(HTTPException) as error:
         vision_structure(

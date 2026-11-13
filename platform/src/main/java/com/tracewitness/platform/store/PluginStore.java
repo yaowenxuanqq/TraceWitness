@@ -56,16 +56,25 @@ public class PluginStore {
                 id, runId, fromId, toId, reason, actor);
     }
 
+    public int countTable(String table, String runId) {
+        Integer count = jdbc.queryForObject("select count(*) from " + table + " where run_id = ?", Integer.class, runId);
+        return count == null ? 0 : count.intValue();
+    }
+
     public List<Map<String, Object>> listManifests(String runId) {
+        return listManifests(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listManifests(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, name, version, arch, abi, resource_mb, payload_hash, signature, payload, "
                         + "slot, reason, health, loaded, hash_checked, check_order from plugin_manifest "
-                        + "where run_id = ? order by id",
+                        + "where run_id = ? order by id limit ? offset ?",
                 (rs, rowNum) -> {
                     Map<String, Object> row = manifestRow(rs);
                     row.remove("signature");
                     row.remove("payload");
                     return row;
-                }, runId);
+                }, runId, limit, offset);
     }
 
     public Map<String, Object> findManifest(String id) {
@@ -85,8 +94,12 @@ public class PluginStore {
     }
 
     public List<Map<String, Object>> listHealth(String runId) {
+        return listHealth(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listHealth(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, manifest_id, score, signature_ok, hash_ok, abi_ok, resource_ok "
-                        + "from plugin_health where run_id = ? order by id",
+                        + "from plugin_health where run_id = ? order by id limit ? offset ?",
                 (rs, rowNum) -> {
                     Map<String, Object> row = new LinkedHashMap<String, Object>();
                     row.put("id", rs.getString("id"));
@@ -98,12 +111,16 @@ public class PluginStore {
                     row.put("abiOk", rs.getBoolean("abi_ok"));
                     row.put("resourceOk", rs.getBoolean("resource_ok"));
                     return row;
-                }, runId);
+                }, runId, limit, offset);
     }
 
     public List<Map<String, Object>> listRollbacks(String runId) {
+        return listRollbacks(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listRollbacks(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, from_id, to_id, reason, actor from plugin_rollback "
-                        + "where run_id = ? order by id",
+                        + "where run_id = ? order by id limit ? offset ?",
                 (rs, rowNum) -> {
                     Map<String, Object> row = new LinkedHashMap<String, Object>();
                     row.put("id", rs.getString("id"));
@@ -113,7 +130,7 @@ public class PluginStore {
                     row.put("reason", rs.getString("reason"));
                     row.put("actor", rs.getString("actor"));
                     return row;
-                }, runId);
+                }, runId, limit, offset);
     }
 
     private static Map<String, Object> manifestRow(ResultSet rs) throws SQLException {

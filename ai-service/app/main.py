@@ -1,6 +1,8 @@
+import hmac
 import os
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 
 from app.adapters import (
     MockAdapter,
@@ -63,6 +65,8 @@ STRUCTURE_FIELDS = frozenset(
     }
 )
 POINT_FIELDS = ("frame_index", "tick", "x", "y", "w", "h", "confidence")
+MAX_FRAME_PIXELS = 4096 * 4096
+MAX_TOTAL_PIXELS = 50_000_000
 
 
 def _check_fields(body, allowed):
@@ -130,14 +134,48 @@ def build_adapter():
     mode = os.environ.get("TRACEWITNESS_MODE", "MOCK")
     if mode.upper() == "MOCK" or os.environ.get("MOCK_MODE") == "1":
         return MockAdapter()
+    allow_empty_key = os.environ.get("TRACEWITNESS_MODEL_ALLOW_EMPTY_KEY") == "1"
     return OpenAICompatibleAdapter(
         os.environ.get("TRACEWITNESS_MODEL_BASE_URL", ""),
         os.environ.get("TRACEWITNESS_MODEL_API_KEY", ""),
         os.environ.get("TRACEWITNESS_MODEL_NAME", ""),
+        allow_empty_key=allow_empty_key,
     )
 
 
+def _assert_service_token():
+    mode = os.environ.get("TRACEWITNESS_MODE", "MOCK").upper()
+    mock = mode == "MOCK" or os.environ.get("MOCK_MODE") == "1"
+    token = os.environ.get("TRACEWITNESS_SERVICE_TOKEN", "")
+    if not mock and not token:
+        raise RuntimeError("TRACEWITNESS_SERVICE_TOKEN is required when TRACEWITNESS_MODE is not MOCK")
+
+
+def require_service_token(authorization: str | None) -> None:
+    expected = os.environ.get("TRACEWITNESS_SERVICE_TOKEN", "")
+    presented = ""
+    if isinstance(authorization, str) and authorization.lower().startswith("bearer "):
+        presented = authorization[7:].strip()
+    if not expected or not hmac.compare_digest(presented.encode("utf-8"), expected.encode("utf-8")):
+        raise HTTPException(status_code=401, detail="unauthorized")
+
+
 adapter = build_adapter()
+
+
+@app.middleware("http")
+async def service_auth(request, call_next):
+    if request.url.path.startswith("/v1/"):
+        try:
+            require_service_token(request.headers.get("authorization"))
+        except HTTPException as exc:
+            return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return await call_next(request)
+
+
+@app.on_event("startup")
+def _startup():
+    _assert_service_token()
 
 
 @app.get("/health")
@@ -186,6 +224,9 @@ def vision_track(body: dict):
         frames = _integer(body, "frames", SAMPLE_FRAMES, 2, 30)
         width = _integer(body, "frame_width", 1920, 64, 4096)
         height = _integer(body, "frame_height", 1080, 64, 4096)
+        pixels = frames * width * height
+        if width * height > MAX_FRAME_PIXELS or pixels > MAX_TOTAL_PIXELS:
+            raise ValueError("frame pixel budget exceeded")
         return analyze_sample(frames, width, height)
 
     return _call(action)

@@ -27,9 +27,12 @@ public final class MediaTypes {
     }
 
     public static String validate(String filename, String contentType, byte[] bytes) {
-        if (bytes == null || bytes.length == 0) {
-            throw new IllegalArgumentException("empty upload");
-        }
+        String type = validateDeclared(filename, contentType);
+        assertPayload(type, bytes);
+        return type;
+    }
+
+    public static String validateDeclared(String filename, String contentType) {
         String type = normalize(contentType);
         boolean audio = AUDIO_TYPES.contains(type);
         boolean video = VIDEO_TYPES.contains(type);
@@ -46,6 +49,16 @@ public final class MediaTypes {
         if (video && !VIDEO_EXTENSIONS.contains(extension)) {
             throw new IllegalArgumentException("extension does not match video type");
         }
+        return type;
+    }
+
+    public static void assertPayload(String type, byte[] bytes) {
+        if (bytes == null || bytes.length == 0) {
+            throw new IllegalArgumentException("empty upload");
+        }
+        String normalized = normalize(type);
+        boolean audio = AUDIO_TYPES.contains(normalized);
+        boolean video = VIDEO_TYPES.contains(normalized);
         String family = sniff(bytes);
         if (family == null) {
             throw new IllegalArgumentException("unsupported media format");
@@ -54,7 +67,6 @@ public final class MediaTypes {
                 && ((audio && !"audio".equals(family)) || (video && !"video".equals(family)))) {
             throw new IllegalArgumentException("payload does not match declared media type");
         }
-        return type;
     }
 
     public static String normalize(String contentType) {

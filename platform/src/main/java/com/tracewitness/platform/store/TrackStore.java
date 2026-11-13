@@ -54,8 +54,16 @@ public class TrackStore {
     }
 
     public List<Map<String, Object>> listTracks(String runId) {
+        return listTracks(runId, Integer.MAX_VALUE, Integer.MAX_VALUE);
+    }
+
+    public List<Map<String, Object>> listTracks(String runId, int trackLimit, int pointLimit) {
+        return listTracks(runId, trackLimit, 0, pointLimit);
+    }
+
+    public List<Map<String, Object>> listTracks(String runId, int trackLimit, int offset, int pointLimit) {
         List<Map<String, Object>> tracks = jdbc.query(
-                "select id, run_id, device_id, local_key, point_count, opened_tick, closed_tick from track where run_id = ? order by id",
+                "select id, run_id, device_id, local_key, point_count, opened_tick, closed_tick from track where run_id = ? order by id limit ? offset ?",
                 (rs, rowNum) -> {
                     Map<String, Object> row = new LinkedHashMap<String, Object>();
                     row.put("id", rs.getString("id"));
@@ -67,30 +75,24 @@ public class TrackStore {
                     row.put("closedTick", rs.getLong("closed_tick"));
                     row.put("points", new ArrayList<Map<String, Object>>());
                     return row;
-                }, runId);
-        Map<String, Map<String, Object>> byId = new LinkedHashMap<String, Map<String, Object>>();
+                }, runId, trackLimit, offset);
         for (Map<String, Object> track : tracks) {
-            byId.put(String.valueOf(track.get("id")), track);
+            List<Map<String, Object>> points = jdbc.query(
+                    "select id, frame_index, tick, x, y, w, h, confidence from track_point where track_id = ? order by frame_index, id limit ?",
+                    (rs, rowNum) -> {
+                        Map<String, Object> point = new LinkedHashMap<String, Object>();
+                        point.put("id", rs.getString("id"));
+                        point.put("frameIndex", rs.getInt("frame_index"));
+                        point.put("tick", rs.getLong("tick"));
+                        point.put("x", rs.getBigDecimal("x"));
+                        point.put("y", rs.getBigDecimal("y"));
+                        point.put("w", rs.getBigDecimal("w"));
+                        point.put("h", rs.getBigDecimal("h"));
+                        point.put("confidence", rs.getBigDecimal("confidence"));
+                        return point;
+                    }, track.get("id"), pointLimit);
+            track.put("points", points);
         }
-        jdbc.query("select id, track_id, frame_index, tick, x, y, w, h, confidence from track_point where run_id = ? order by track_id, frame_index, id",
-                rs -> {
-                    Map<String, Object> track = byId.get(rs.getString("track_id"));
-                    if (track == null) {
-                        return;
-                    }
-                    Map<String, Object> point = new LinkedHashMap<String, Object>();
-                    point.put("id", rs.getString("id"));
-                    point.put("frameIndex", rs.getInt("frame_index"));
-                    point.put("tick", rs.getLong("tick"));
-                    point.put("x", rs.getBigDecimal("x"));
-                    point.put("y", rs.getBigDecimal("y"));
-                    point.put("w", rs.getBigDecimal("w"));
-                    point.put("h", rs.getBigDecimal("h"));
-                    point.put("confidence", rs.getBigDecimal("confidence"));
-                    @SuppressWarnings("unchecked")
-                    List<Map<String, Object>> points = (List<Map<String, Object>>) track.get("points");
-                    points.add(point);
-                }, runId);
         return tracks;
     }
 }

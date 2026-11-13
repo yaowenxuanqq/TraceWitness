@@ -1,6 +1,7 @@
 package com.tracewitness.platform.retrieval;
 
 import com.tracewitness.platform.profile.ProfilePolicy;
+import com.tracewitness.platform.config.AppProperties;
 import com.tracewitness.platform.scenario.ScenarioService;
 import com.tracewitness.platform.store.PlatformStore;
 import com.tracewitness.platform.store.PlatformStore.RunManifest;
@@ -53,18 +54,27 @@ public class RetrievalService {
         });
     }
 
-    public Map<String, Object> overview() {
+    public Map<String, Object> overview(AppProperties.Overview limits) {
         String runId = scenarios.runId();
         List<Map<String, Object>> queries = new ArrayList<Map<String, Object>>();
-        for (Map<String, Object> query : retrieval.listQueries(runId)) {
+        boolean childrenTruncated = false;
+        for (Map<String, Object> query : retrieval.listQueries(runId, limits.getQueries(), 0)) {
             String queryId = String.valueOf(query.get("id"));
-            query.put("hits", retrieval.listHits(queryId));
-            query.put("exclusions", retrieval.listExclusions(queryId));
+            List<Map<String, Object>> hits = retrieval.listHits(queryId, limits.getChildItems());
+            List<Map<String, Object>> exclusions = retrieval.listExclusions(queryId, limits.getChildItems());
+            childrenTruncated = childrenTruncated
+                    || retrieval.countHits(queryId) > hits.size()
+                    || retrieval.countExclusions(queryId) > exclusions.size();
+            query.put("hits", hits);
+            query.put("exclusions", exclusions);
             queries.add(query);
         }
         Map<String, Object> body = new LinkedHashMap<String, Object>();
         body.put("queries", queries);
-        body.put("passages", retrieval.listPassages(runId));
+        body.put("passages", retrieval.listPassages(runId, limits.getPassages(), 0));
+        body.put("queriesTotal", Integer.valueOf(retrieval.countQueries(runId)));
+        body.put("passagesTotal", Integer.valueOf(retrieval.countTable("passage_case", runId)));
+        body.put("childrenTruncated", Boolean.valueOf(childrenTruncated));
         return body;
     }
 

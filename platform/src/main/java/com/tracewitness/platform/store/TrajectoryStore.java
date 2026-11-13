@@ -68,10 +68,24 @@ public class TrajectoryStore {
                 id, runId, caseKey, leftName, rightName, leftScore, rightScore, winner, trained);
     }
 
+    public int countTable(String table, String runId) {
+        Integer count = jdbc.queryForObject("select count(*) from " + table + " where run_id = ?", Integer.class, runId);
+        return count == null ? 0 : count;
+    }
+
+    public int countPoints(String trajectoryId) {
+        Integer count = jdbc.queryForObject("select count(*) from trajectory_point where trajectory_id = ?", Integer.class, trajectoryId);
+        return count == null ? 0 : count;
+    }
+
     public List<Map<String, Object>> listTrajectories(String runId) {
+        return listTrajectories(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listTrajectories(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, case_key, profile_code, kept_count, dropped_count, thin_count "
-                        + "from trajectory where run_id = ? order by id",
-                (rs, rowNum) -> trajectoryRow(rs), runId);
+                        + "from trajectory where run_id = ? order by id limit ? offset ?",
+                (rs, rowNum) -> trajectoryRow(rs), runId, limit, offset);
     }
 
     public Map<String, Object> findTrajectory(String id) {
@@ -82,14 +96,22 @@ public class TrajectoryStore {
     }
 
     public List<Map<String, Object>> listPoints(String trajectoryId) {
+        return listPoints(trajectoryId, Integer.MAX_VALUE);
+    }
+
+    public List<Map<String, Object>> listPoints(String trajectoryId, int limit) {
         return jdbc.query("select id, point_key, door_code, observed_second, x, y, kept, thinned, reason, seq_no "
-                        + "from trajectory_point where trajectory_id = ? order by seq_no, id",
-                (rs, rowNum) -> pointRow(rs), trajectoryId);
+                        + "from trajectory_point where trajectory_id = ? order by seq_no, id limit ?",
+                (rs, rowNum) -> pointRow(rs), trajectoryId, limit);
     }
 
     public List<Map<String, Object>> listCompanions(String runId) {
+        return listCompanions(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listCompanions(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, left_code, right_code, door_code, gap_seconds from companion_link "
-                        + "where run_id = ? order by door_code, left_code, right_code, id",
+                        + "where run_id = ? order by door_code, left_code, right_code, id limit ? offset ?",
                 (rs, rowNum) -> {
                     Map<String, Object> row = new LinkedHashMap<String, Object>();
                     row.put("id", rs.getString("id"));
@@ -99,13 +121,17 @@ public class TrajectoryStore {
                     row.put("doorCode", rs.getString("door_code"));
                     row.put("gapSeconds", Integer.valueOf(rs.getInt("gap_seconds")));
                     return row;
-                }, runId);
+                }, runId, limit, offset);
     }
 
     public List<Map<String, Object>> listPackages(String runId) {
+        return listPackages(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listPackages(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, case_key, trajectory_id, point_keys, companion_text, source_ids, "
-                        + "manifest, digest, status, error_code from evidence_package where run_id = ? order by id",
-                (rs, rowNum) -> packageRow(rs), runId);
+                        + "manifest, digest, status, error_code from evidence_package where run_id = ? order by id limit ? offset ?",
+                (rs, rowNum) -> packageRow(rs), runId, limit, offset);
     }
 
     public Map<String, Object> findPackage(String id) {
@@ -123,8 +149,12 @@ public class TrajectoryStore {
     }
 
     public List<Map<String, Object>> listHardCases(String runId) {
-        return jdbc.query("select id, run_id, case_key, reason, label, status from hard_case where run_id = ? order by id",
-                (rs, rowNum) -> hardRow(rs), runId);
+        return listHardCases(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listHardCases(String runId, int limit, int offset) {
+        return jdbc.query("select id, run_id, case_key, reason, label, status from hard_case where run_id = ? order by id limit ? offset ?",
+                (rs, rowNum) -> hardRow(rs), runId, limit, offset);
     }
 
     public Map<String, Object> findHardCase(String id) {
@@ -134,8 +164,12 @@ public class TrajectoryStore {
     }
 
     public List<Map<String, Object>> listCompares(String runId) {
+        return listCompares(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listCompares(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, case_key, left_name, right_name, left_score, right_score, winner, trained "
-                        + "from model_compare where run_id = ? order by id",
+                        + "from model_compare where run_id = ? order by id limit ? offset ?",
                 (rs, rowNum) -> {
                     Map<String, Object> row = new LinkedHashMap<String, Object>();
                     row.put("id", rs.getString("id"));
@@ -148,7 +182,7 @@ public class TrajectoryStore {
                     row.put("winner", rs.getString("winner"));
                     row.put("trained", Boolean.valueOf(rs.getBoolean("trained")));
                     return row;
-                }, runId);
+                }, runId, limit, offset);
     }
 
     private static Map<String, Object> trajectoryRow(ResultSet rs) throws SQLException {

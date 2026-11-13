@@ -118,24 +118,41 @@ public class ProfileStore {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
+    public int countTable(String table, String runId) {
+        Integer count = jdbc.queryForObject("select count(*) from " + table + " where run_id = ?", Integer.class, runId);
+        return count == null ? 0 : count;
+    }
+
     public List<Map<String, Object>> listProfiles(String runId) {
+        return listProfiles(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listProfiles(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, code, gallery, display_name, address_label, centroid, quality, status, "
-                        + "merged_into, visit_count from person_profile where run_id = ? order by id",
-                (rs, rowNum) -> profileRow(rs), runId);
+                        + "merged_into, visit_count from person_profile where run_id = ? order by id limit ? offset ?",
+                (rs, rowNum) -> profileRow(rs), runId, limit, offset);
     }
 
     public List<Map<String, Object>> listDoors(String runId) {
-        return jdbc.query("select id, code, name from door_node where run_id = ? order by id", (rs, rowNum) -> {
+        return listDoors(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listDoors(String runId, int limit, int offset) {
+        return jdbc.query("select id, code, name from door_node where run_id = ? order by id limit ? offset ?", (rs, rowNum) -> {
             Map<String, Object> row = new LinkedHashMap<String, Object>();
             row.put("id", rs.getString("id"));
             row.put("code", rs.getString("code"));
             row.put("name", rs.getString("name"));
-            return row;
-        }, runId);
+                    return row;
+                }, runId, limit, offset);
     }
 
     public List<Map<String, Object>> listEdges(String runId) {
-        return jdbc.query("select id, from_code, to_code, travel_seconds from door_edge where run_id = ? order by id",
+        return listEdges(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listEdges(String runId, int limit, int offset) {
+        return jdbc.query("select id, from_code, to_code, travel_seconds from door_edge where run_id = ? order by id limit ? offset ?",
                 (rs, rowNum) -> {
                     Map<String, Object> row = new LinkedHashMap<String, Object>();
                     row.put("id", rs.getString("id"));
@@ -143,18 +160,26 @@ public class ProfileStore {
                     row.put("toCode", rs.getString("to_code"));
                     row.put("travelSeconds", Integer.valueOf(rs.getInt("travel_seconds")));
                     return row;
-                }, runId);
+                }, runId, limit, offset);
     }
 
     public List<Map<String, Object>> listTickets(String runId) {
+        return listTickets(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listTickets(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, case_key, ticket_kind, left_profile_id, right_profile_id, status, reason, "
-                        + "observed_seconds, travel_seconds, detail, created_at from merge_ticket where run_id = ? order by id",
-                (rs, rowNum) -> ticketRow(rs), runId);
+                        + "observed_seconds, travel_seconds, detail, created_at from merge_ticket where run_id = ? order by id limit ? offset ?",
+                (rs, rowNum) -> ticketRow(rs), runId, limit, offset);
     }
 
     public List<Map<String, Object>> listAudits(String runId) {
+        return listAudits(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listAudits(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, action, target_id, detail, actor, created_at from audit_log "
-                        + "where run_id = ? order by id",
+                        + "where run_id = ? order by id limit ? offset ?",
                 (rs, rowNum) -> {
                     Map<String, Object> row = new LinkedHashMap<String, Object>();
                     row.put("id", rs.getString("id"));
@@ -165,7 +190,7 @@ public class ProfileStore {
                     row.put("actor", rs.getString("actor"));
                     row.put("createdAt", rs.getString("created_at"));
                     return row;
-                }, runId);
+                }, runId, limit, offset);
     }
 
     public List<Map<String, Object>> listBoundSamples(String profileId) {

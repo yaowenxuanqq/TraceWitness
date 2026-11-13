@@ -67,7 +67,33 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Object"
+                $ref: "#/components/schemas/Overview"
+  /api/pages/{section}:
+    get:
+      operationId: pageRunSection
+      summary: Page a growing run section outside the overview limit
+      parameters:
+        - $ref: "#/components/parameters/Section"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: One page of the requested section
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Page"
+        "404":
+          description: Unknown section
   /api/sites:
     get:
       operationId: listSites
@@ -125,7 +151,7 @@ paths:
   /api/agent/runs:
     get:
       operationId: listAgentRuns
-      summary: List Agent runs visible on the local dashboard
+      summary: List Agent runs in the current run
       responses:
         "200":
           description: Agent run rows
@@ -442,6 +468,12 @@ components:
       name: X-Trace-Token
       description: Per-process token obtained from the loopback-only /api/session endpoint.
   parameters:
+    Section:
+      name: section
+      in: path
+      required: true
+      schema:
+        type: string
     Id:
       name: id
       in: path
@@ -471,6 +503,43 @@ components:
           schema:
             $ref: "#/components/schemas/Object"
   schemas:
+    Overview:
+      type: object
+      required: [overviewMeta]
+      properties:
+        overviewMeta:
+          type: object
+          required: [truncated, limits, totals]
+          properties:
+            truncated:
+              type: boolean
+            limits:
+              type: object
+              additionalProperties:
+                type: integer
+            totals:
+              type: object
+              additionalProperties:
+                type: integer
+    Page:
+      type: object
+      additionalProperties: false
+      required: [section, items, total, limit, offset, truncated]
+      properties:
+        section:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+        total:
+          type: integer
+        limit:
+          type: integer
+        offset:
+          type: integer
+        truncated:
+          type: boolean
     Object:
       type: object
       additionalProperties: true
@@ -532,6 +601,7 @@ components:
         actor:
           type: string
           minLength: 1
+          maxLength: 64
     EvidenceVerify:
       type: object
       additionalProperties: false
@@ -549,6 +619,7 @@ components:
         actor:
           type: string
           minLength: 1
+          maxLength: 64
     Rollback:
       type: object
       additionalProperties: false
@@ -557,6 +628,7 @@ components:
         actor:
           type: string
           minLength: 1
+          maxLength: 64
     MediaUpload:
       type: object
       additionalProperties: false

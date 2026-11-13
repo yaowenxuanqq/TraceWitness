@@ -218,8 +218,17 @@ public class PlatformStore {
         }, runId);
     }
 
+    public int countEvents(String runId) {
+        Integer count = jdbc.queryForObject("select count(*) from event where run_id = ?", Integer.class, runId);
+        return count == null ? 0 : count;
+    }
+
     public List<Map<String, Object>> listEvents(String runId, int limit) {
-        return jdbc.query("select id, run_id, device_id, site_id, event_type, summary, occurred_at, tick from event where run_id = ? order by tick, id limit ?", (rs, rowNum) -> eventRow(rs), runId, limit);
+        return listEvents(runId, limit, 0);
+    }
+
+    public List<Map<String, Object>> listEvents(String runId, int limit, int offset) {
+        return jdbc.query("select id, run_id, device_id, site_id, event_type, summary, occurred_at, tick from event where run_id = ? order by tick, id limit ? offset ?", (rs, rowNum) -> eventRow(rs), runId, limit, offset);
     }
 
     public Map<String, Object> findEvent(String id) {
@@ -237,8 +246,8 @@ public class PlatformStore {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
-    public List<Map<String, Object>> listAgentRuns() {
-        return queryAgent("order by created_at, id");
+    public List<Map<String, Object>> listAgentRuns(String runId) {
+        return queryAgent("where run_id = ? order by created_at, id", runId);
     }
 
     public void insertAgentRun(String id, String runId, String task, String status, boolean mockMode,
@@ -257,8 +266,17 @@ public class PlatformStore {
         jdbc.update("insert into tool_call( id, agent_run_id, run_id, tool_name, arguments_json, result_json, source_ids, created_at) values (?, ?, ?, ?, ?, ?, ?, ?)", id, agentRunId, runId, toolName, argumentsJson, resultJson, sourceIds, createdAt);
     }
 
+    public int countSteps(String agentRunId) {
+        Integer count = jdbc.queryForObject("select count(*) from agent_step where agent_run_id = ?", Integer.class, agentRunId);
+        return count == null ? 0 : count;
+    }
+
     public List<Map<String, Object>> listSteps(String agentRunId) {
-        return jdbc.query("select id, agent_run_id, run_id, step_kind, detail, created_at from agent_step where agent_run_id = ? order by id", (rs, rowNum) -> {
+        return listSteps(agentRunId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listSteps(String agentRunId, int limit, int offset) {
+        return jdbc.query("select id, agent_run_id, run_id, step_kind, detail, created_at from agent_step where agent_run_id = ? order by id limit ? offset ?", (rs, rowNum) -> {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", rs.getString("id"));
             row.put("agentRunId", rs.getString("agent_run_id"));
@@ -267,11 +285,20 @@ public class PlatformStore {
             row.put("detail", rs.getString("detail"));
             row.put("createdAt", rs.getString("created_at"));
             return row;
-        }, agentRunId);
+        }, agentRunId, limit, offset);
+    }
+
+    public int countToolCalls(String agentRunId) {
+        Integer count = jdbc.queryForObject("select count(*) from tool_call where agent_run_id = ?", Integer.class, agentRunId);
+        return count == null ? 0 : count;
     }
 
     public List<Map<String, Object>> listToolCalls(String agentRunId) {
-        return jdbc.query("select id, agent_run_id, run_id, tool_name, arguments_json, result_json, source_ids, created_at from tool_call where agent_run_id = ? order by id", (rs, rowNum) -> {
+        return listToolCalls(agentRunId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listToolCalls(String agentRunId, int limit, int offset) {
+        return jdbc.query("select id, agent_run_id, run_id, tool_name, arguments_json, result_json, source_ids, created_at from tool_call where agent_run_id = ? order by id limit ? offset ?", (rs, rowNum) -> {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", rs.getString("id"));
             row.put("agentRunId", rs.getString("agent_run_id"));
@@ -282,7 +309,7 @@ public class PlatformStore {
             row.put("sourceIds", readList(rs.getString("source_ids")));
             row.put("createdAt", rs.getString("created_at"));
             return row;
-        }, agentRunId);
+        }, agentRunId, limit, offset);
     }
 
     public String writeJson(Object value) {

@@ -1,6 +1,9 @@
 package com.tracewitness.platform.agent;
 
 import com.tracewitness.platform.config.AppProperties;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -13,6 +16,25 @@ import java.util.Map;
 
 @Component
 public class PythonAgentClient {
+    public static class AgentCallException extends RuntimeException {
+        private final String failureType;
+        private final String publicDetail;
+
+        AgentCallException(String message, String failureType, String publicDetail, Throwable cause) {
+            super(message, cause);
+            this.failureType = failureType;
+            this.publicDetail = publicDetail;
+        }
+
+        public String failureType() {
+            return failureType;
+        }
+
+        public String publicDetail() {
+            return publicDetail;
+        }
+    }
+
     private final AppProperties properties;
     private final RestTemplate rest;
 
@@ -22,6 +44,17 @@ public class PythonAgentClient {
         factory.setConnectTimeout(3000);
         factory.setReadTimeout(60000);
         this.rest = new RestTemplate(factory);
+        this.rest.getInterceptors().add(authorization());
+    }
+
+    private ClientHttpRequestInterceptor authorization() {
+        return (request, body, execution) -> {
+            String token = properties.getServiceToken();
+            if (token != null && !token.trim().isEmpty()) {
+                request.getHeaders().set(HttpHeaders.AUTHORIZATION, "Bearer " + token.trim());
+            }
+            return execution.execute(request, body);
+        };
     }
 
     public List<AgentModels.ToolSelection> selectTools(String runId, String clockMode, String requestTimestamp,
@@ -94,10 +127,13 @@ public class PythonAgentClient {
         try {
             return rest.postForObject(properties.getAiBaseUrl() + path, body, type);
         } catch (HttpStatusCodeException exception) {
-            throw new IllegalStateException("AI " + path + " -> " + exception.getRawStatusCode() + " "
-                    + exception.getResponseBodyAsString(), exception);
+            int code = exception.getRawStatusCode();
+            boolean authentication = code == HttpStatus.UNAUTHORIZED.value() || code == HttpStatus.FORBIDDEN.value();
+            String failure = authentication ? "service_auth_failed" : "model_failed";
+            String detail = authentication ? "服务认证失败" : "模型调用失败";
+            throw new AgentCallException("AI " + path + " -> " + code, failure, detail, exception);
         } catch (RestClientException exception) {
-            throw new IllegalStateException("AI 服务不可用: " + path, exception);
+            throw new AgentCallException("AI 服务不可用: " + path, "model_failed", "模型调用失败", exception);
         }
     }
 }

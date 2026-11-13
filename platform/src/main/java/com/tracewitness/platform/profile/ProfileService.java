@@ -4,6 +4,7 @@ import com.tracewitness.platform.profile.ProfilePolicy.Decision;
 import com.tracewitness.platform.profile.ProfilePolicy.GalleryProfile;
 import com.tracewitness.platform.profile.ProfilePolicy.SampleWeight;
 import com.tracewitness.platform.quant.Quantities;
+import com.tracewitness.platform.config.AppProperties;
 import com.tracewitness.platform.scenario.ScenarioService;
 import com.tracewitness.platform.store.PlatformStore;
 import com.tracewitness.platform.store.PlatformStore.RunManifest;
@@ -54,14 +55,19 @@ public class ProfileService {
         });
     }
 
-    public Map<String, Object> overview() {
+    public Map<String, Object> overview(AppProperties.Overview limits) {
         String runId = scenarios.runId();
         Map<String, Object> body = new LinkedHashMap<String, Object>();
-        body.put("doors", profiles.listDoors(runId));
-        body.put("edges", profiles.listEdges(runId));
-        body.put("profiles", profiles.listProfiles(runId));
-        body.put("tickets", profiles.listTickets(runId));
-        body.put("audits", profiles.listAudits(runId));
+        body.put("doors", profiles.listDoors(runId, limits.getDoors(), 0));
+        body.put("edges", profiles.listEdges(runId, limits.getDoors(), 0));
+        body.put("profiles", profiles.listProfiles(runId, limits.getProfiles(), 0));
+        body.put("tickets", profiles.listTickets(runId, limits.getTickets(), 0));
+        body.put("audits", profiles.listAudits(runId, limits.getAudits(), 0));
+        body.put("doorsTotal", Integer.valueOf(profiles.countTable("door_node", runId)));
+        body.put("edgesTotal", Integer.valueOf(profiles.countTable("door_edge", runId)));
+        body.put("profilesTotal", Integer.valueOf(profiles.countProfiles(runId)));
+        body.put("ticketsTotal", Integer.valueOf(profiles.countTable("merge_ticket", runId)));
+        body.put("auditsTotal", Integer.valueOf(profiles.countTable("audit_log", runId)));
         return body;
     }
 

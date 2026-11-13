@@ -56,7 +56,7 @@ public class MediaController {
             return ResponseEntity.badRequest().build();
         }
         try {
-            return ResponseEntity.ok(media.storeUpload(file.getOriginalFilename(), file.getContentType(), file.getBytes()));
+            return ResponseEntity.ok(media.storeUpload(file));
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().body(Collections.<String, Object>singletonMap("error", exception.getMessage()));
         }

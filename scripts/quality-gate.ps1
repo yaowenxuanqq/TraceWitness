@@ -63,10 +63,10 @@ try {
     & $python -m pytest tests --cov=app --cov-report=term --cov-report=xml:"$repo\build\reports\coverage-python.xml" --cov-fail-under=70
     Assert-Exit "Python tests and coverage" $LASTEXITCODE
 
-    & $python -m ruff check app tests
+    & $python -m ruff check .
     Assert-Exit "Python lint" $LASTEXITCODE
 
-    & $python -m bandit -r app -q -ll
+    & $python -m bandit -r app bench_detect.py bench_four_streams.py -q -ll
     Assert-Exit "Python security scan" $LASTEXITCODE
 
     & $python -m pip_audit -r requirements.txt

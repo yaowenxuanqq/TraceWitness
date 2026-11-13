@@ -64,9 +64,28 @@ public class RetrievalStore {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
+    public int countTable(String table, String runId) {
+        Integer count = jdbc.queryForObject("select count(*) from " + table + " where run_id = ?", Integer.class, runId);
+        return count == null ? 0 : count;
+    }
+
+    public int countHits(String queryId) {
+        Integer count = jdbc.queryForObject("select count(*) from retrieval_hit where query_id = ?", Integer.class, queryId);
+        return count == null ? 0 : count;
+    }
+
+    public int countExclusions(String queryId) {
+        Integer count = jdbc.queryForObject("select count(*) from retrieval_exclusion where query_id = ?", Integer.class, queryId);
+        return count == null ? 0 : count;
+    }
+
     public List<Map<String, Object>> listQueries(String runId) {
+        return listQueries(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listQueries(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, case_key, image_count, hard_attribute, soft_attribute, person_created, "
-                        + "explain_order from retrieval_query where run_id = ? order by id",
+                        + "explain_order from retrieval_query where run_id = ? order by id limit ? offset ?",
                 (rs, rowNum) -> {
                     Map<String, Object> row = new LinkedHashMap<String, Object>();
                     row.put("id", rs.getString("id"));
@@ -78,12 +97,16 @@ public class RetrievalStore {
                     row.put("personCreated", Boolean.valueOf(rs.getBoolean("person_created")));
                     row.put("explainOrder", rs.getString("explain_order"));
                     return row;
-                }, runId);
+                }, runId, limit, offset);
     }
 
     public List<Map<String, Object>> listHits(String queryId) {
+        return listHits(queryId, Integer.MAX_VALUE);
+    }
+
+    public List<Map<String, Object>> listHits(String queryId, int limit) {
         return jdbc.query("select id, candidate_code, rank_no, face_score, body_score, fused, rank_score, "
-                        + "soft_applied, explanation from retrieval_hit where query_id = ? order by rank_no, id",
+                        + "soft_applied, explanation from retrieval_hit where query_id = ? order by rank_no, id limit ?",
                 (rs, rowNum) -> {
                     Map<String, Object> row = new LinkedHashMap<String, Object>();
                     row.put("id", rs.getString("id"));
@@ -96,12 +119,16 @@ public class RetrievalStore {
                     row.put("softApplied", Boolean.valueOf(rs.getBoolean("soft_applied")));
                     row.put("explanation", rs.getString("explanation"));
                     return row;
-                }, queryId);
+                }, queryId, limit);
     }
 
     public List<Map<String, Object>> listExclusions(String queryId) {
+        return listExclusions(queryId, Integer.MAX_VALUE);
+    }
+
+    public List<Map<String, Object>> listExclusions(String queryId, int limit) {
         return jdbc.query("select id, candidate_code, reason, explanation from retrieval_exclusion "
-                        + "where query_id = ? order by id",
+                        + "where query_id = ? order by id limit ?",
                 (rs, rowNum) -> {
                     Map<String, Object> row = new LinkedHashMap<String, Object>();
                     row.put("id", rs.getString("id"));
@@ -109,13 +136,17 @@ public class RetrievalStore {
                     row.put("reason", rs.getString("reason"));
                     row.put("explanation", rs.getString("explanation"));
                     return row;
-                }, queryId);
+                }, queryId, limit);
     }
 
     public List<Map<String, Object>> listPassages(String runId) {
+        return listPassages(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> listPassages(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, case_key, scene, streak, alerted, level, status, action_name, "
-                        + "action_status, executed, detail from passage_case where run_id = ? order by id",
-                (rs, rowNum) -> passageRow(rs), runId);
+                        + "action_status, executed, detail from passage_case where run_id = ? order by id limit ? offset ?",
+                (rs, rowNum) -> passageRow(rs), runId, limit, offset);
     }
 
     private static Map<String, Object> passageRow(ResultSet rs) throws SQLException {

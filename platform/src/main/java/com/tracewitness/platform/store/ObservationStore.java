@@ -36,10 +36,14 @@ public class ObservationStore {
     }
 
     public List<Map<String, Object>> list(String runId) {
+        return list(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> list(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, track_id, case_key, mode, frame_kind, chosen_frame, chosen_tick, "
                         + "attribute_calls, face_quality, body_quality, attributes_json, masked_json, thumbnail_path, created_at "
-                        + "from structured_observation where run_id = ? order by id",
-                (rs, rowNum) -> row(rs), runId);
+                        + "from structured_observation where run_id = ? order by id limit ? offset ?",
+                (rs, rowNum) -> row(rs), runId, limit, offset);
     }
 
     public Map<String, Object> find(String id) {

@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
@@ -37,6 +38,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 public class ApiController {
+    private static final int ACTOR_MAX_LENGTH = 64;
+
     private final AppProperties properties;
     private final ScenarioService scenarios;
     private final PlatformStore store;
@@ -48,11 +51,13 @@ public class ApiController {
     private final TrajectoryService trajectories;
     private final PluginService plugins;
     private final LocalToken token;
+    private final OverviewBuilder overviewBuilder;
+    private final RunPageService pages;
 
     public ApiController(AppProperties properties, ScenarioService scenarios, PlatformStore store, TrackStore tracks,
                          StructureService structure, RouteService routes, ProfileService profiles,
                          RetrievalService retrieval, TrajectoryService trajectories, PluginService plugins,
-                         LocalToken token) {
+                         LocalToken token, OverviewBuilder overviewBuilder, RunPageService pages) {
         this.properties = properties;
         this.scenarios = scenarios;
         this.store = store;
@@ -64,6 +69,8 @@ public class ApiController {
         this.trajectories = trajectories;
         this.plugins = plugins;
         this.token = token;
+        this.overviewBuilder = overviewBuilder;
+        this.pages = pages;
     }
 
     @GetMapping("/session")
@@ -108,45 +115,14 @@ public class ApiController {
 
     @GetMapping("/overview")
     public Map<String, Object> overview() {
-        String runId = scenarios.runId();
-        RunManifest manifest = store.findManifest(runId);
-        Map<String, Object> agent = store.findAgentRunByRun(runId);
-        Map<String, Object> body = new LinkedHashMap<String, Object>();
-        body.put("mode", properties.getMode());
-        body.put("mockMode", properties.mock());
-        body.put("banner", properties.banner());
-        body.put("run", manifest == null ? null : manifestView(manifest));
-        body.put("sites", store.listSites(runId));
-        body.put("devices", store.listDevices(runId));
-        body.put("events", store.listEvents(runId, 20));
-        body.put("outbox", store.outboxCounts(runId));
-        body.put("agentRun", agent);
-        body.put("steps", agent == null ? Collections.emptyList() : store.listSteps(String.valueOf(agent.get("id"))));
-        body.put("toolCalls", agent == null ? Collections.emptyList() : store.listToolCalls(String.valueOf(agent.get("id"))));
-        body.put("tracks", tracks.listTracks(runId));
-        body.put("observations", structure.list());
-        body.put("decisions", routes.list());
-        Map<String, Object> people = profiles.overview();
-        body.put("doors", people.get("doors"));
-        body.put("doorEdges", people.get("edges"));
-        body.put("profiles", people.get("profiles"));
-        body.put("tickets", people.get("tickets"));
-        body.put("audits", people.get("audits"));
-        Map<String, Object> search = retrieval.overview();
-        body.put("queries", search.get("queries"));
-        body.put("passages", search.get("passages"));
-        Map<String, Object> trail = trajectories.overview();
-        body.put("trajectories", trail.get("trajectories"));
-        body.put("companions", trail.get("companions"));
-        body.put("packages", trail.get("packages"));
-        body.put("hardCases", trail.get("hardCases"));
-        body.put("compares", trail.get("compares"));
-        Map<String, Object> plugin = plugins.overview();
-        body.put("plugins", plugin.get("plugins"));
-        body.put("pluginHealth", plugin.get("health"));
-        body.put("rollbacks", plugin.get("rollbacks"));
-        body.put("tools", tools());
-        return body;
+        return overviewBuilder.build();
+    }
+
+    @GetMapping("/pages/{section}")
+    public ResponseEntity<Map<String, Object>> page(@PathVariable String section,
+                                                    @RequestParam(defaultValue = "50") int limit,
+                                                    @RequestParam(defaultValue = "0") int offset) {
+        return pages.page(section, limit, offset);
     }
 
     @GetMapping("/sites")
@@ -175,7 +151,7 @@ public class ApiController {
 
     @GetMapping("/agent/runs")
     public List<Map<String, Object>> agentRuns() {
-        return store.listAgentRuns();
+        return store.listAgentRuns(scenarios.runId());
     }
 
     @GetMapping("/agent/runs/{id}")
@@ -234,8 +210,11 @@ public class ApiController {
 
     @PostMapping("/hard-cases/{id}/label")
     public ResponseEntity<Map<String, Object>> labelHardCase(@PathVariable String id, @RequestBody HardLabelRequest body) {
-        if (blank(body.getLabel()) || blank(body.getActor())) {
+        if (body == null || blank(body.getLabel()) || blank(body.getActor())) {
             return invalid("missing_field");
+        }
+        if (body.getActor().trim().length() > ACTOR_MAX_LENGTH) {
+            return invalid("invalid_field");
         }
         if (!TrajectoryPolicy.LABELS.contains(body.getLabel())) {
             return invalid("invalid_field");
@@ -262,8 +241,11 @@ public class ApiController {
 
     @PostMapping("/plugins/rollback")
     public ResponseEntity<Map<String, Object>> pluginRollback(@RequestBody RollbackRequest body) {
-        if (blank(body.getActor())) {
+        if (body == null || blank(body.getActor())) {
             return invalid("missing_field");
+        }
+        if (body.getActor().trim().length() > ACTOR_MAX_LENGTH) {
+            return invalid("invalid_field");
         }
         return applied(plugins.rollback(body.getActor().trim()));
     }
@@ -273,6 +255,9 @@ public class ApiController {
             return invalid("missing_field");
         }
         if (!"approve".equals(body.getDecision()) && !"reject".equals(body.getDecision())) {
+            return invalid("invalid_field");
+        }
+        if (body.getActor().trim().length() > ACTOR_MAX_LENGTH) {
             return invalid("invalid_field");
         }
         return null;

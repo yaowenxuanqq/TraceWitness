@@ -10,7 +10,7 @@
 | Gradle 退出码 | 0 |
 | pytest 退出码 | 0 |
 | 检测计时退出码 | 0 |
-| 测试方法 | 39 |
+| 测试方法 | 44 |
 | 失败 | 0 |
 | 错误 | 0 |
 | 跳过 | 0 |
@@ -37,25 +37,25 @@
 - `EvalSuiteWeek11Test` 通过。其中 20 条正向策略场景（`w08`、`w09`、`w10`）的期望字段与策略输出一致。`w07.json` 的 10 条只检查工具列表非空，这次没有测量 Agent 任务完成率。反向 20 条的期望字段与规则输出一致。
 - `PluginPolicyTest` 通过。`w11.json` 的 5 条验签期望与 `PluginPolicy` 一致。同一测试断言 1000 次验签在 2000 毫秒内完成；精确耗时没有单独打印。
 - `eval/holdout/` 里有 1 个场景文件。`HoldoutTest` 通过时，这 10 条按封存场景计入本次平台测试，开发场景文件没有因此改写。
-- 一万条向量检索：vectors=10000 dim=3 repeats=15 p50_ms=18 p95_ms=31 target_p95_ms=1000
+- 一万条向量检索：vectors=10000 dim=3 repeats=15 p50_ms=18 p95_ms=26 target_p95_ms=1000
 
 ## Python
 
 ```text
-.......................                                                  [100%]
-23 passed in 2.75s
+.........................                                                [100%]
+25 passed in 2.34s
 ```
 
 ```text
-detect_fps_640=180.25 target=5
+detect_fps_640=378.53 target=5
 ```
 
 四路检测退出码 0。
 
 ```text
 streams=4 frames=20 width=1920
-fps=21.23,21.03,71.28,19.07
-min=19.07 p50=21.13 p95=63.77 target_min=2
+fps=29.81,29.99,26.93,97.46
+min=26.93 p50=29.90 p95=87.34 target_min=2
 ```
 
 ## 未测项

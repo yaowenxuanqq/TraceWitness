@@ -3,6 +3,9 @@ setlocal
 cd /d "%~dp0"
 set TRACEWITNESS_MODE=MOCK
 set MOCK_MODE=1
+if not defined TRACEWITNESS_SERVICE_TOKEN (
+  for /f %%T in ('powershell -NoProfile -Command "[guid]::NewGuid().ToString('N')"') do set "TRACEWITNESS_SERVICE_TOKEN=%%T"
+)
 set "REPO=%CD%"
 set "TRACEWITNESS_DB=jdbc:h2:file:%REPO:\=/%/data/local/tracewitness"
 

@@ -7,7 +7,7 @@ TARGET_FPS = 5
 
 def main():
     fps = measure_detect_fps()
-    print("detect_fps_640=%.2f target=%s" % (fps, TARGET_FPS))
+    print(f"detect_fps_640={fps:.2f} target={TARGET_FPS}")
     return 0 if fps >= TARGET_FPS else 1
 
 

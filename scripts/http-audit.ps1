@@ -50,9 +50,10 @@ function Wait-Url([string]$url) {
     throw "Timed out waiting for $url"
 }
 
-function Invoke-Api([string]$method, [string]$url, [string]$body, [bool]$auth) {
+function Invoke-Api([string]$method, [string]$url, [string]$body, [bool]$auth, [string]$bearer = "") {
     $headers = @{}
     if ($auth) { $headers["X-Trace-Token"] = $token }
+    if ($bearer) { $headers["Authorization"] = "Bearer $bearer" }
     $params = @{ Method = $method; Uri = $url; Headers = $headers; UseBasicParsing = $true; TimeoutSec = 20 }
     if ($method -eq "POST" -and $null -ne $body) {
         $headers["Content-Type"] = "application/json"
@@ -146,12 +147,14 @@ try {
     $env:Path = "$env:JAVA_HOME\bin;" + $env:Path
     $env:TRACEWITNESS_MODE = "MOCK"
     $env:TRACEWITNESS_API_TOKEN = $token
+    $script:serviceToken = [guid]::NewGuid().ToString("N")
+    $env:TRACEWITNESS_SERVICE_TOKEN = $script:serviceToken
     $env:TRACEWITNESS_DB = "jdbc:h2:file:$db"
     $env:TRACEWITNESS_AI_BASE_URL = $aiRoot
     $ai = Start-Process -FilePath $python -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "$aiPort") -WorkingDirectory (Join-Path $repo "ai-service") -PassThru -WindowStyle Hidden
     Wait-Url "$aiRoot/health"
-    $args = "gradlew.bat bootRun --args=`"--server.port=$webPort --tracewitness.media-dir=$media`""
-    $platform = Start-Process -FilePath "cmd.exe" -ArgumentList @("/c", $args) -WorkingDirectory (Join-Path $repo "platform") -PassThru -WindowStyle Hidden
+    $gradleArgs = "gradlew.bat bootRun --args=`"--server.port=$webPort --tracewitness.media-dir=$media`""
+    $platform = Start-Process -FilePath "cmd.exe" -ArgumentList @("/c", $gradleArgs) -WorkingDirectory (Join-Path $repo "platform") -PassThru -WindowStyle Hidden
     Wait-Url "$root/api/health"
 
     $health = (Invoke-Api "GET" "$root/api/health" $null $false).Body | ConvertFrom-Json
@@ -178,6 +181,9 @@ try {
 
     $overview = Wait-OverviewSeed "$root/api/overview"
     Add-Check "overview seeded" (@($overview.events).Count -ge 3 -and $null -ne $overview.agentRun) "events=$(@($overview.events).Count)"
+    Add-Check "overview bounded" ($null -ne $overview.overviewMeta -and @($overview.events).Count -le [int]$overview.overviewMeta.limits.events) "meta missing"
+    $eventPage = (Invoke-Api "GET" "$root/api/pages/events?limit=1&offset=1" $null $false).Body | ConvertFrom-Json
+    Add-Check "event page" ($eventPage.section -eq "events" -and @($eventPage.items).Count -eq 1 -and [int]$eventPage.total -gt 1) "page mismatch"
     Add-Check "overview sections" (@($overview.profiles).Count -gt 0 -and @($overview.queries).Count -gt 0 -and @($overview.trajectories).Count -gt 0 -and @($overview.plugins).Count -gt 0) "one or more dashboard sections empty"
     Add-Check "agent tool calls" (@($overview.toolCalls).Count -ge 1) "calls=$(@($overview.toolCalls).Count)"
     Add-Check "agent tools" (@($overview.tools).Count -eq 6 -and @($overview.tools | Where-Object { $_.implemented -eq $true }).Count -eq 6) "tool registry mismatch"
@@ -207,7 +213,9 @@ try {
         tool_results = @()
         model_seed = 20261110
     }) | ConvertTo-Json -Compress -Depth 8
-    $selected = (Invoke-Api "POST" "$aiRoot/v1/agent/select-tool" $selectBody $false).Body | ConvertFrom-Json
+    Assert-Status (Invoke-Api "POST" "$aiRoot/v1/agent/select-tool" $selectBody $false) 401 "ai missing service token"
+    Assert-Status (Invoke-Api "POST" "$aiRoot/v1/agent/select-tool" $selectBody $false "wrong-token") 401 "ai wrong service token"
+    $selected = (Invoke-Api "POST" "$aiRoot/v1/agent/select-tool" $selectBody $false $script:serviceToken).Body | ConvertFrom-Json
     Add-Check "ai select-tool" (@($selected.tool_calls).Count -ge 1 -and @($selected.tool_calls)[0].tool_name -eq "search_events") "unexpected tool selection"
     $extraBody = New-ClockBody (@{
         task = "x"
@@ -216,14 +224,14 @@ try {
         model_seed = 20261110
         unexpected = $true
     }) | ConvertTo-Json -Compress -Depth 8
-    $extra = Invoke-Api "POST" "$aiRoot/v1/agent/select-tool" $extraBody $false
+    $extra = Invoke-Api "POST" "$aiRoot/v1/agent/select-tool" $extraBody $false $script:serviceToken
     Add-Check "ai extra field rejected" ($extra.Status -eq 400) "status=$($extra.Status) body=$($extra.Body)"
     $boundBody = New-ClockBody (@{
         frames = 2
         frame_width = 100000
         frame_height = 1080
     }) | ConvertTo-Json -Compress -Depth 8
-    $bound = Invoke-Api "POST" "$aiRoot/v1/vision/track" $boundBody $false
+    $bound = Invoke-Api "POST" "$aiRoot/v1/vision/track" $boundBody $false $script:serviceToken
     Add-Check "ai vision bounds" ($bound.Status -eq 400) "status=$($bound.Status) body=$($bound.Body)"
 
     [IO.File]::WriteAllText($tmpHtml, '<html><script>document.title="pwn"</script></html>')
@@ -236,6 +244,13 @@ try {
     $uploaded = Invoke-Upload $tmpWav "audio/wav" "sample.wav" $true
     $uploadedJson = $uploaded.Body | ConvertFrom-Json
     Add-Check "wav upload accepted" ($uploaded.Status -eq 200 -and $uploadedJson.contentType -eq "audio/wav") "status=$($uploaded.Status) body=$($uploaded.Body)"
+    $afterUpload = (Invoke-Api "GET" "$root/api/media" $null $false).Body | ConvertFrom-Json
+    $uploadedVisible = @($afterUpload.uploads | Where-Object { $_.id -eq $uploadedJson.id })
+    Add-Check "ready upload visible" ($uploadedVisible.Count -eq 1) "uploads=$(@($afterUpload.uploads).Count)"
+    $beforeFailed = @($afterUpload.uploads).Count
+    $failedAgain = Invoke-Upload $tmpHtml "text/html" "evil.html" $true
+    $afterFailed = (Invoke-Api "GET" "$root/api/media" $null $false).Body | ConvertFrom-Json
+    Add-Check "failed upload hidden" ($failedAgain.Status -eq 400 -and @($afterFailed.uploads).Count -eq $beforeFailed) "status=$($failedAgain.Status) uploads=$(@($afterFailed.uploads).Count)"
     $wavAsset = Invoke-Api "GET" "$root$($uploadedJson.url)" $null $false
     Add-Check "wav asset hardening" (
         [string]$wavAsset.Headers["Content-Type"] -match "audio/wav" -and
@@ -275,6 +290,16 @@ try {
     Assert-Status (Invoke-Api "POST" "$root/api/plugins/$($active[0].id)/fault" $null $true) 409 "repeat fault"
     $exported = Invoke-Api "GET" "$root/api/hard-cases/export" $null $false
     Add-Check "hard case export" ($exported.Status -eq 200 -and $exported.Body -match $hard[0].id) "status=$($exported.Status)"
+
+    if ($platform -ne $null) { Stop-Process -Id $platform.Id -Force -ErrorAction SilentlyContinue }
+    Get-CimInstance Win32_Process -Filter "Name = 'java.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -like "*$webPort*" } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    Start-Sleep -Seconds 2
+    $platform = Start-Process -FilePath "cmd.exe" -ArgumentList @("/c", $gradleArgs) -WorkingDirectory (Join-Path $repo "platform") -PassThru -WindowStyle Hidden
+    Wait-Url "$root/api/health"
+    $restarted = Invoke-Api "GET" "$root$($uploadedJson.url)" $null $false
+    Add-Check "upload survives restart" ($restarted.Status -eq 200) "status=$($restarted.Status)"
 
     Write-Host "TOTAL pass=$checkCount fail=0"
 } finally {

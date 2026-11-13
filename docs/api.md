@@ -6,7 +6,7 @@
 
 写接口只接受契约里的字段。多出来的字段、缺必填字段、类型不对或 JSON 不完整，返回 400。记录不属于当前 run，或 ID 不存在，返回 404。同一条记录重复提交，返回 409。
 
-本机写操作需要 token。设置 `TRACEWITNESS_API_TOKEN` 可固定它；不设置时进程自己生成。浏览器打开首页后，`GET /api/session` 只在本机回环地址返回 token，页面把它放进 `X-Trace-Token`。同源的 `tw_token` cookie 同样有效。没有 token 的写请求返回 401。读接口不需要 token。
+本机写操作需要 token。设置 `TRACEWITNESS_API_TOKEN` 可固定它；不设置时进程自己生成。浏览器打开首页后，`GET /api/session` 只在本机回环地址返回 token，页面把它放进 `X-Trace-Token`。`tw_token` cookie 只在同源写请求中有效。没有 token 的写请求返回 401。API 只接受 `localhost`、`127.0.0.1` 和 `::1` 的 Host，其他 Host 返回 403，避免 DNS rebinding。读接口不需要 token。Java 调用 Python 的业务接口使用单独的 `TRACEWITNESS_SERVICE_TOKEN`，不复用浏览器写 token。Mock 启动脚本每次生成随机值。真实模型未配置时，P0 验收保持未关闭。
 
 ## 状态
 
@@ -14,7 +14,8 @@
 | --- | --- | --- |
 | GET | `/api/health` | 进程存活 |
 | GET | `/api/mode` | `MOCK_MODE` 或真实模式 |
-| GET | `/api/overview` | 首页用的运行、事件、档案、检索、轨迹、证据包、插件和难例 |
+| GET | `/api/overview` | 首页用的运行、事件、档案、检索、轨迹、证据包、插件和难例。响应带 `overviewMeta`，列表在数据库层截断 |
+| GET | `/api/pages/{section}` | 按 `limit` 和 `offset` 查看概览以外的记录。`section` 可以是 `events`、`steps`、`tool-calls`、`tracks`、`observations`、`decisions`、`profiles`、`tickets`、`queries`、`passages`、`trajectories`、`packages`、`hard-cases`、`plugins` |
 
 ## 调查
 
@@ -22,7 +23,7 @@
 | --- | --- | --- |
 | GET | `/api/events` | 本次 run 的摄像机事件 |
 | GET | `/api/events/{id}` | 单条事件 |
-| GET | `/api/agent/runs` | Agent 运行 |
+| GET | `/api/agent/runs` | 本次 run 的 Agent 运行 |
 | GET | `/api/agent/runs/{id}` | 单次运行 |
 | GET | `/api/agent/runs/{id}/tool-calls` | 该次运行的工具调用 |
 | GET | `/api/media` | 音频、片段和上传 |
@@ -33,7 +34,7 @@
 | --- | --- | --- |
 | POST | `/api/media/uploads` | 上传本机测试音视频。表单字段名是 `file` |
 
-服务端只接受常见的 `audio/*` 和 `video/*` 容器。声明的 MIME 类型、文件名扩展名和文件头必须一致。`text/html`、`image/svg+xml`、可执行文件和无法识别的文件头返回 400。所有响应带 `X-Content-Type-Options: nosniff`，并带同源内容安全策略，避免上传文件被当作同源页面执行。
+服务端只接受常见的 `audio/*` 和 `video/*` 容器。声明的 MIME 类型、文件名扩展名和文件头必须一致。`text/html`、`image/svg+xml`、可执行文件和无法识别的文件头返回 400。上传先落临时文件，校验通过并原子移动后才变成 `READY`。时间线和读取接口只返回 `READY` 资产。所有响应带 `X-Content-Type-Options: nosniff`，并带同源内容安全策略，避免上传文件被当作同源页面执行。
 
 ## 档案
 

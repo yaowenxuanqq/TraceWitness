@@ -77,6 +77,7 @@ try {
     $env:JAVA_HOME = Find-Java8
     $env:Path = "$env:JAVA_HOME\bin;" + $env:Path
     $env:TRACEWITNESS_MODE = "MOCK"
+    $env:TRACEWITNESS_SERVICE_TOKEN = [guid]::NewGuid().ToString("N")
     $env:TRACEWITNESS_DB = "jdbc:h2:file:$($temp -replace '\\','/')/tracewitness"
     $env:TRACEWITNESS_AI_BASE_URL = $aiRoot
     $ai = Start-Process -FilePath $python -ArgumentList @("-m", "uvicorn", "app.main:app", "--host", "127.0.0.1", "--port", "$aiPort") -WorkingDirectory (Join-Path $repo "ai-service") -PassThru -WindowStyle Hidden

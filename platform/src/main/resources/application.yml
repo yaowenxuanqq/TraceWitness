@@ -27,7 +27,32 @@ tracewitness:
   mode: ${TRACEWITNESS_MODE:MOCK}
   ai-base-url: ${TRACEWITNESS_AI_BASE_URL:http://127.0.0.1:8000}
   api-token: ${TRACEWITNESS_API_TOKEN:}
+  service-token: ${TRACEWITNESS_SERVICE_TOKEN:}
   auto-loop: true
+  media:
+    max-upload-bytes: 33554432
+    grace-seconds: 900
+    sweep-ms: 60000
+  overview:
+    events: 20
+    agent-steps: 50
+    tool-calls: 50
+    tracks: 200
+    observations: 200
+    decisions: 200
+    profiles: 100
+    tickets: 100
+    queries: 50
+    passages: 100
+    trajectories: 50
+    packages: 50
+    hard-cases: 50
+    plugins: 50
+    doors: 100
+    audits: 100
+    companions: 100
+    compares: 50
+    child-items: 20
   eval:
     scenario-id: w02-mock-incident
     epoch-start: "2026-01-01T00:00:00.000Z"

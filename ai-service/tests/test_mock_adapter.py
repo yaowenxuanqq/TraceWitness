@@ -7,8 +7,10 @@ import pytest
 
 from app.adapters import (
     MockAdapter,
+    ModelCallFailed,
     ModelNotConfigured,
     OpenAICompatibleAdapter,
+    _parse_tool_calls,
     draft_report,
     select_tool,
 )
@@ -124,6 +126,12 @@ def test_openai_adapter_rejects_non_http_scheme():
     adapter = OpenAICompatibleAdapter("file:///tmp/model", "local-key", "owner-model")
     with pytest.raises(ModelNotConfigured, match="http"):
         adapter.select_tool("investigate", ["search_events"], [], 20261110)
+
+
+def test_malformed_model_tool_arguments_are_model_failures():
+    message = {"tool_calls": [{"function": {"name": "search_events", "arguments": "{"}}]}
+    with pytest.raises(ModelCallFailed, match="tool arguments"):
+        _parse_tool_calls(message, ["search_events"])
 
 
 def _execute(call):

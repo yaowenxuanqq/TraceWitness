@@ -42,12 +42,16 @@ public class DecisionStore {
     }
 
     public List<Map<String, Object>> list(String runId) {
+        return list(runId, Integer.MAX_VALUE, 0);
+    }
+
+    public List<Map<String, Object>> list(String runId, int limit, int offset) {
         return jdbc.query("select id, run_id, case_key, observation_id, policy_version, clock_mode, business, "
                         + "face_quality, body_quality, continuity, history_count, q_observed, q_scripted, q_input, "
                         + "theta_u_eff, uncertainty, degraded, route, reason, fusion, conclusion, cloud_called, "
                         + "local_label, local_score, cloud_label, cloud_score, decided_at "
-                        + "from decision_snapshot where run_id = ? order by id",
-                (rs, rowNum) -> row(rs), runId);
+                        + "from decision_snapshot where run_id = ? order by id limit ? offset ?",
+                (rs, rowNum) -> row(rs), runId, limit, offset);
     }
 
     private static Map<String, Object> row(ResultSet rs) throws SQLException {

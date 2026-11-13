@@ -100,9 +100,10 @@ public class AgentService {
                 invalid = CitationCheck.invalid(allowed, report.sourceIds, report.insufficientEvidence);
             }
             persist(runId, task, now, selected, results, report, invalid, retried);
-        } catch (RuntimeException exception) {
-            LOG.warn("agent investigation failed for run {}", runId, exception);
-            transactions.executeWithoutResult(status -> saveFailure(runId, task, now, "model_failed", "模型调用失败"));
+        } catch (PythonAgentClient.AgentCallException exception) {
+            LOG.warn("investigation failed run={} type={}", runId, exception.failureType());
+            transactions.executeWithoutResult(status -> saveFailure(
+                    runId, task, now, exception.failureType(), exception.publicDetail()));
         }
     }
 

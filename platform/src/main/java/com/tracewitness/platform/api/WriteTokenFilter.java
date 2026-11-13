@@ -6,16 +6,22 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Locale;
+import java.util.Set;
 
 @Component
 public class WriteTokenFilter extends OncePerRequestFilter {
     public static final String HEADER = "X-Trace-Token";
     public static final String COOKIE = "tw_token";
+    private static final Set<String> LOCAL_HOSTS = new HashSet<String>(Arrays.asList(
+            "localhost", "127.0.0.1", "::1", "0:0:0:0:0:0:0:1"));
 
     private final LocalToken token;
 
@@ -26,23 +32,21 @@ public class WriteTokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
+        if (!localHost(request.getServerName())) {
+            reject(response, 403, "invalid_host");
+            return;
+        }
         if (isRead(request)) {
             if (request.getRequestURI().startsWith("/api") || "/".equals(request.getRequestURI())) {
-                Cookie cookie = new Cookie(COOKIE, token.value());
-                cookie.setPath("/");
-                cookie.setHttpOnly(true);
-                response.addCookie(cookie);
-                response.setHeader("Set-Cookie", COOKIE + "=" + token.value() + "; Path=/; HttpOnly; SameSite=Strict");
+                response.setHeader("Set-Cookie",
+                        COOKIE + "=" + token.value() + "; Path=/; HttpOnly; SameSite=Strict");
+                response.setHeader("Cache-Control", "no-store");
             }
             chain.doFilter(request, response);
             return;
         }
         if (request.getRequestURI().startsWith("/api") && !accepted(request)) {
-            byte[] body = "{\"error\":\"unauthorized\"}".getBytes(StandardCharsets.UTF_8);
-            response.setStatus(401);
-            response.setContentType("application/json");
-            response.setContentLength(body.length);
-            response.getOutputStream().write(body);
+            reject(response, 401, "unauthorized");
             return;
         }
         chain.doFilter(request, response);
@@ -53,7 +57,7 @@ public class WriteTokenFilter extends OncePerRequestFilter {
             return true;
         }
         String raw = request.getHeader("Cookie");
-        if (raw == null) {
+        if (raw == null || !sameOriginCookieUse(request)) {
             return false;
         }
         String[] parts = raw.split(";");
@@ -64,6 +68,50 @@ public class WriteTokenFilter extends OncePerRequestFilter {
             }
         }
         return false;
+    }
+
+    private static boolean sameOriginCookieUse(HttpServletRequest request) {
+        String fetchSite = request.getHeader("Sec-Fetch-Site");
+        if (fetchSite != null && !"same-origin".equals(fetchSite) && !"none".equals(fetchSite)) {
+            return false;
+        }
+        String origin = request.getHeader("Origin");
+        if (origin == null || origin.trim().isEmpty()) {
+            return true;
+        }
+        try {
+            URI uri = URI.create(origin);
+            String host = uri.getHost();
+            int port = uri.getPort() < 0 ? defaultPort(uri.getScheme()) : uri.getPort();
+            return request.getScheme().equalsIgnoreCase(uri.getScheme())
+                    && request.getServerName().equalsIgnoreCase(host)
+                    && request.getServerPort() == port;
+        } catch (IllegalArgumentException exception) {
+            return false;
+        }
+    }
+
+    private static int defaultPort(String scheme) {
+        return "https".equalsIgnoreCase(scheme) ? 443 : 80;
+    }
+
+    private static boolean localHost(String raw) {
+        if (raw == null) {
+            return false;
+        }
+        String host = raw.trim().toLowerCase(Locale.ROOT);
+        if (host.startsWith("[") && host.endsWith("]")) {
+            host = host.substring(1, host.length() - 1);
+        }
+        return LOCAL_HOSTS.contains(host);
+    }
+
+    private static void reject(HttpServletResponse response, int status, String error) throws IOException {
+        byte[] body = ("{\"error\":\"" + error + "\"}").getBytes(StandardCharsets.UTF_8);
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.setContentLength(body.length);
+        response.getOutputStream().write(body);
     }
 
     private static boolean isRead(HttpServletRequest request) {

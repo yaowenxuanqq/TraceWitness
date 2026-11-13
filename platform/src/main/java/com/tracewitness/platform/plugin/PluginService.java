@@ -1,6 +1,7 @@
 package com.tracewitness.platform.plugin;
 
 import com.tracewitness.platform.plugin.PluginPolicy.Verdict;
+import com.tracewitness.platform.config.AppProperties;
 import com.tracewitness.platform.scenario.ScenarioService;
 import com.tracewitness.platform.store.PlatformStore;
 import com.tracewitness.platform.store.PlatformStore.RunManifest;
@@ -51,12 +52,15 @@ public class PluginService {
         });
     }
 
-    public Map<String, Object> overview() {
+    public Map<String, Object> overview(AppProperties.Overview limits) {
         String runId = scenarios.runId();
         Map<String, Object> body = new LinkedHashMap<String, Object>();
-        body.put("plugins", plugins.listManifests(runId));
-        body.put("health", plugins.listHealth(runId));
-        body.put("rollbacks", plugins.listRollbacks(runId));
+        body.put("plugins", plugins.listManifests(runId, limits.getPlugins(), 0));
+        body.put("health", plugins.listHealth(runId, limits.getPlugins(), 0));
+        body.put("rollbacks", plugins.listRollbacks(runId, limits.getPlugins(), 0));
+        body.put("pluginsTotal", Integer.valueOf(plugins.count(runId)));
+        body.put("healthTotal", Integer.valueOf(plugins.countTable("plugin_health", runId)));
+        body.put("rollbacksTotal", Integer.valueOf(plugins.countTable("plugin_rollback", runId)));
         return body;
     }
 

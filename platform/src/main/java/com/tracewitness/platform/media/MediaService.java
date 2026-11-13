@@ -5,33 +5,49 @@ import com.tracewitness.platform.scenario.ScenarioService;
 import com.tracewitness.platform.store.MediaStore;
 import com.tracewitness.platform.store.PlatformStore;
 import com.tracewitness.platform.time.TimeSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.FileTime;
+import java.security.MessageDigest;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class MediaService {
+    private static final Logger LOG = LoggerFactory.getLogger(MediaService.class);
+
     private final MediaStore mediaStore;
     private final PlatformStore platformStore;
     private final ScenarioService scenarios;
     private final AppProperties properties;
     private final TimeSource timeSource;
+    private final TransactionTemplate transactions;
 
     public MediaService(MediaStore mediaStore, PlatformStore platformStore, ScenarioService scenarios,
-                        AppProperties properties, TimeSource timeSource) {
+                        AppProperties properties, TimeSource timeSource, TransactionTemplate transactions) {
         this.mediaStore = mediaStore;
         this.platformStore = platformStore;
         this.scenarios = scenarios;
         this.properties = properties;
         this.timeSource = timeSource;
+        this.transactions = transactions;
     }
 
     @Transactional
@@ -60,17 +76,39 @@ public class MediaService {
         }
     }
 
-    @Transactional
-    public Map<String, Object> storeUpload(String filename, String contentType, byte[] bytes) throws IOException {
-        String type = MediaTypes.validate(filename, contentType, bytes);
+    public Map<String, Object> storeUpload(MultipartFile file) throws IOException {
+        String filename = file.getOriginalFilename();
+        String type = MediaTypes.validateDeclared(filename, file.getContentType());
         String runId = scenarios.runId();
         String id = platformStore.nextId(runId, "media");
         String relative = runId + "/uploads/" + id + "/file." + MediaTypes.extension(filename);
-        Path file = resolve(relative);
-        Files.createDirectories(file.getParent());
-        Files.write(file, bytes);
-        mediaStore.insertAsset(id, runId, null, null, "UPLOAD", "FILE", type, relative,
-                null, null, null, null, null, timeSource.formatNow());
+        String createdAt = timeSource.formatNow();
+        transactions.executeWithoutResult(status -> mediaStore.insertUploading(id, runId, type, relative, createdAt));
+        Path staging = resolve(".staging/" + id + ".part");
+        try {
+            Files.createDirectories(staging.getParent());
+            Staged staged = writeStaging(file, staging);
+            MediaTypes.assertPayload(type, staged.header);
+            transactions.executeWithoutResult(status -> mediaStore.updateState(id, "STAGED", staged.sha256, Long.valueOf(staged.size)));
+            Path target = resolve(relative);
+            if (Files.exists(target)) {
+                throw new IOException("upload target already exists");
+            }
+            Files.createDirectories(target.getParent());
+            Files.move(staging, target, StandardCopyOption.ATOMIC_MOVE);
+            transactions.executeWithoutResult(status -> mediaStore.updateState(id, "READY", staged.sha256, Long.valueOf(staged.size)));
+        } catch (RuntimeException | IOException exception) {
+            boolean moved = Files.isRegularFile(resolve(relative));
+            if (!moved) {
+                Files.deleteIfExists(staging);
+                try {
+                    transactions.executeWithoutResult(status -> mediaStore.updateState(id, "FAILED", null, null));
+                } catch (RuntimeException ignored) {
+                    LOG.warn("media upload id={} code=state_update_failed", id);
+                }
+            }
+            throw exception;
+        }
         Map<String, Object> body = new LinkedHashMap<String, Object>();
         body.put("id", id);
         body.put("contentType", type);
@@ -98,6 +136,9 @@ public class MediaService {
         }
         List<Map<String, Object>> clips = new ArrayList<Map<String, Object>>();
         for (Map<String, Object> asset : mediaStore.listAssets(runId, "CLIP")) {
+            if (!readable(asset)) {
+                continue;
+            }
             clips.add(clipView(asset, segmentViews, samplesPerTick, continuous));
         }
         Map<String, Object> body = new LinkedHashMap<String, Object>();
@@ -114,7 +155,11 @@ public class MediaService {
     }
 
     public Map<String, Object> findAsset(String id) {
-        return mediaStore.findAsset(id);
+        Map<String, Object> row = mediaStore.findAsset(id);
+        if (!currentRun(row) || !"READY".equals(String.valueOf(row.get("status")))) {
+            return null;
+        }
+        return readable(row) ? row : null;
     }
 
     public byte[] readStored(Map<String, Object> asset) throws IOException {
@@ -123,7 +168,8 @@ public class MediaService {
 
     public byte[] readFrame(String segmentId, int index) throws IOException {
         Map<String, Object> segment = mediaStore.findSegment(segmentId);
-        if (segment == null || index < 0 || index >= ((Number) segment.get("frameCount")).intValue()) {
+        if (segment == null || !currentRun(segment)
+                || index < 0 || index >= ((Number) segment.get("frameCount")).intValue()) {
             return null;
         }
         Path file = resolve(String.valueOf(segment.get("frameDir"))).resolve(index + ".png");
@@ -193,6 +239,9 @@ public class MediaService {
     private List<Map<String, Object>> channelViews(String runId) {
         List<Map<String, Object>> views = new ArrayList<Map<String, Object>>();
         for (Map<String, Object> asset : mediaStore.listAssets(runId, "CHANNEL")) {
+            if (!readable(asset)) {
+                continue;
+            }
             Map<String, Object> view = new LinkedHashMap<String, Object>();
             view.put("id", asset.get("id"));
             view.put("deviceId", asset.get("deviceId"));
@@ -209,6 +258,9 @@ public class MediaService {
     private List<Map<String, Object>> uploadViews(String runId) {
         List<Map<String, Object>> views = new ArrayList<Map<String, Object>>();
         for (Map<String, Object> asset : mediaStore.listUploads(runId)) {
+            if (!readable(asset)) {
+                continue;
+            }
             Map<String, Object> view = new LinkedHashMap<String, Object>();
             view.put("id", asset.get("id"));
             view.put("contentType", asset.get("contentType"));
@@ -290,6 +342,217 @@ public class MediaService {
             }
         }
         return null;
+    }
+
+    public void recover() {
+        Instant now = Instant.now();
+        int grace = properties.getMedia().getGraceSeconds();
+        for (Map<String, Object> row : mediaStore.listRecoverable()) {
+            String id = String.valueOf(row.get("id"));
+            String status = String.valueOf(row.get("status"));
+            try {
+                Path target = resolve(String.valueOf(row.get("storagePath")));
+                if ("READY".equals(status)) {
+                    if (!Files.isRegularFile(target)) {
+                        transactions.executeWithoutResult(tx -> mediaStore.updateState(id, "DAMAGED", null, null));
+                        LOG.info("media recover id={} from={} result=damaged code=ready_missing", id, status);
+                    }
+                    continue;
+                }
+                if (!expired(String.valueOf(row.get("createdAt")), grace, now)) {
+                    continue;
+                }
+                Path staging = resolve(".staging/" + id + ".part");
+                if ("STAGED".equals(status) && Files.isRegularFile(target) && sameHash(target, row.get("sha256"))) {
+                    long size = Files.size(target);
+                    transactions.executeWithoutResult(tx -> mediaStore.updateState(id, "READY", String.valueOf(row.get("sha256")), Long.valueOf(size)));
+                    Files.deleteIfExists(staging);
+                    LOG.info("media recover id={} from={} result=ready code=staged_promoted", id, status);
+                    continue;
+                }
+                Files.deleteIfExists(staging);
+                if (Files.isRegularFile(target)) {
+                    quarantine(target);
+                }
+                transactions.executeWithoutResult(tx -> mediaStore.updateState(id, "FAILED", null, null));
+                LOG.info("media recover id={} from={} result=failed code=expired_{}", id, status, status.toLowerCase(java.util.Locale.ROOT));
+            } catch (IOException exception) {
+                LOG.warn("media recover id={} result=skipped code=io", id);
+            }
+        }
+        sweepOrphans();
+    }
+
+    private boolean readable(Map<String, Object> asset) {
+        try {
+            if (Files.isRegularFile(resolve(String.valueOf(asset.get("storagePath"))))) {
+                return true;
+            }
+            transactions.executeWithoutResult(status -> mediaStore.updateState(String.valueOf(asset.get("id")), "DAMAGED", null, null));
+            LOG.info("media read id={} result=damaged code=ready_missing", asset.get("id"));
+        } catch (IOException exception) {
+            return false;
+        }
+        return false;
+    }
+
+    private Staged writeStaging(MultipartFile file, Path staging) throws IOException {
+        MessageDigest digest;
+        try {
+            digest = MessageDigest.getInstance("SHA-256");
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new IllegalStateException(exception);
+        }
+        byte[] buffer = new byte[8192];
+        byte[] header = new byte[64];
+        int headerLength = 0;
+        long size = 0;
+        long max = properties.getMedia().getMaxUploadBytes();
+        try (InputStream input = file.getInputStream(); OutputStream output = Files.newOutputStream(staging)) {
+            int read;
+            while ((read = input.read(buffer)) >= 0) {
+                size += read;
+                if (size > max) {
+                    throw new IllegalArgumentException("upload too large");
+                }
+                if (headerLength < header.length) {
+                    int copy = (int) Math.min(read, header.length - headerLength);
+                    System.arraycopy(buffer, 0, header, headerLength, copy);
+                    headerLength += copy;
+                }
+                digest.update(buffer, 0, read);
+                output.write(buffer, 0, read);
+            }
+        }
+        if (size == 0) {
+            throw new IllegalArgumentException("empty upload");
+        }
+        Staged staged = new Staged();
+        staged.header = Arrays.copyOf(header, headerLength);
+        staged.size = size;
+        staged.sha256 = hex(digest.digest());
+        return staged;
+    }
+
+    private void sweepOrphans() {
+        try {
+            Path root = mediaRoot();
+            Instant cutoff = Instant.now().minusSeconds(properties.getMedia().getGraceSeconds());
+            java.util.Set<String> kept = new java.util.HashSet<String>();
+            for (Map<String, Object> row : mediaStore.listRecoverable()) {
+                String status = String.valueOf(row.get("status"));
+                if ("READY".equals(status) || "STAGED".equals(status)) {
+                    kept.add(String.valueOf(row.get("storagePath")).replace('\\', '/'));
+                }
+            }
+            Path staging = root.resolve(".staging");
+            if (Files.isDirectory(staging)) {
+                try (DirectoryStream<Path> files = Files.newDirectoryStream(staging)) {
+                    for (Path file : files) {
+                        if (Files.isRegularFile(file) && olderThan(file, cutoff)) {
+                            quarantine(file);
+                            LOG.info("media recover id={} result=removed code=orphan_staging", file.getFileName());
+                        }
+                    }
+                }
+            }
+            try (DirectoryStream<Path> runs = Files.newDirectoryStream(root)) {
+                for (Path run : runs) {
+                    String name = run.getFileName().toString();
+                    if (name.startsWith(".") || !Files.isDirectory(run)) {
+                        continue;
+                    }
+                    Path uploads = run.resolve("uploads");
+                    if (!Files.isDirectory(uploads)) {
+                        continue;
+                    }
+                    java.util.List<Path> files = new ArrayList<Path>();
+                    try (java.util.stream.Stream<Path> walk = Files.walk(uploads, 3)) {
+                        walk.forEach(files::add);
+                    }
+                    for (Path file : files) {
+                        if (!Files.isRegularFile(file) || !olderThan(file, cutoff)) {
+                            continue;
+                        }
+                        String relative = root.relativize(file).toString().replace('\\', '/');
+                        if (kept.contains(relative)) {
+                            continue;
+                        }
+                        quarantine(file);
+                        LOG.info("media recover id={} result=removed code=orphan_upload", file.getFileName());
+                    }
+                }
+            }
+        } catch (IOException exception) {
+            LOG.warn("media recover result=skipped code=orphan_io");
+        }
+    }
+
+    private void quarantine(Path file) throws IOException {
+        Path root = mediaRoot();
+        Path normalized = file.toAbsolutePath().normalize();
+        if (!normalized.startsWith(root)) {
+            throw new IOException("media path escapes root");
+        }
+        Path quarantine = root.resolve(".quarantine");
+        Files.createDirectories(quarantine);
+        Path dest = quarantine.resolve(normalized.getFileName().toString() + "-" + System.nanoTime());
+        Files.move(normalized, dest, StandardCopyOption.ATOMIC_MOVE);
+        Files.deleteIfExists(dest);
+    }
+
+    private static boolean olderThan(Path file, Instant cutoff) throws IOException {
+        FileTime time = Files.getLastModifiedTime(file);
+        return !time.toInstant().isAfter(cutoff);
+    }
+
+    private static boolean expired(String createdAt, int graceSeconds, Instant now) {
+        try {
+            return !Instant.parse(createdAt).plusSeconds(graceSeconds).isAfter(now);
+        } catch (RuntimeException exception) {
+            return true;
+        }
+    }
+
+    private static boolean sameHash(Path file, Object expected) throws IOException {
+        if (expected == null) {
+            return false;
+        }
+        return hex(sha256(file)).equals(String.valueOf(expected));
+    }
+
+    private static byte[] sha256(Path file) throws IOException {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            try (InputStream input = Files.newInputStream(file)) {
+                byte[] buffer = new byte[8192];
+                int read;
+                while ((read = input.read(buffer)) >= 0) {
+                    digest.update(buffer, 0, read);
+                }
+            }
+            return digest.digest();
+        } catch (java.security.NoSuchAlgorithmException exception) {
+            throw new IllegalStateException(exception);
+        }
+    }
+
+    private static String hex(byte[] bytes) {
+        StringBuilder builder = new StringBuilder(bytes.length * 2);
+        for (byte item : bytes) {
+            builder.append(String.format("%02x", item));
+        }
+        return builder.toString();
+    }
+
+    private static final class Staged {
+        private byte[] header;
+        private long size;
+        private String sha256;
+    }
+
+    private boolean currentRun(Map<String, Object> row) {
+        return row != null && scenarios.runId().equals(row.get("runId"));
     }
 
     private Path resolve(String relative) throws IOException {

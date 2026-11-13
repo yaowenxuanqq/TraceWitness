@@ -23,6 +23,12 @@ function esc(value) {
 
 function render(overview) {
   document.getElementById("banner").textContent = overview.banner || "MOCK_MODE";
+  const note = document.getElementById("overview-note");
+  const meta = overview.overviewMeta;
+  if (note) {
+    note.hidden = !(meta && meta.truncated);
+    note.textContent = meta && meta.truncated ? "概览已截断，其余记录请通过 /api/pages/{section} 分页查看。" : "";
+  }
   const run = overview.agentRun;
   document.getElementById("task").textContent = run ? run.task : "调查尚未生成";
   document.getElementById("conclusion").textContent = run ? run.conclusion : "";

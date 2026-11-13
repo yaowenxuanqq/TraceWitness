@@ -28,10 +28,13 @@ def main():
     with ThreadPoolExecutor(max_workers=STREAMS) as pool:
         rates = list(pool.map(one_stream, range(STREAMS)))
     minimum = min(rates)
-    print("streams=%d frames=20 width=1920" % STREAMS)
-    print("fps=%s" % ",".join("%.2f" % rate for rate in rates))
-    print("min=%.2f p50=%.2f p95=%.2f target_min=%s" % (
-        minimum, percentile(rates, 0.50), percentile(rates, 0.95), TARGET_MIN_FPS))
+    print(f"streams={STREAMS} frames=20 width=1920")
+    rates_text = ",".join(f"{rate:.2f}" for rate in rates)
+    print(f"fps={rates_text}")
+    print(
+        f"min={minimum:.2f} p50={percentile(rates, 0.50):.2f} "
+        f"p95={percentile(rates, 0.95):.2f} target_min={TARGET_MIN_FPS}"
+    )
     return 0 if minimum >= TARGET_MIN_FPS else 1
 
 

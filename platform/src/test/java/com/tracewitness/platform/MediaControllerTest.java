@@ -19,7 +19,6 @@ import java.util.Map;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -64,7 +63,7 @@ class MediaControllerTest {
     void uploadRejectsNonMediaContent() throws Exception {
         MockMultipartFile file = new MockMultipartFile("file", "evil.html", "text/html",
                 "<html></html>".getBytes(StandardCharsets.UTF_8));
-        when(media.storeUpload(anyString(), anyString(), any(byte[].class)))
+        when(media.storeUpload(any(org.springframework.web.multipart.MultipartFile.class)))
                 .thenThrow(new IllegalArgumentException("unsupported media type"));
 
         mvc.perform(multipart("/api/media/uploads").file(file).header("X-Trace-Token", "test-token"))

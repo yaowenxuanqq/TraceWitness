@@ -24,6 +24,7 @@ class HttpContractFileTest {
             "/api/mode",
             "/api/tools",
             "/api/overview",
+            "/api/pages/{section}",
             "/api/sites",
             "/api/devices",
             "/api/events",
